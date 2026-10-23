@@ -1,0 +1,61 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path');
+const {createFileTools}=require('../src/dsh-files');
+const {createDshTasks}=require('../src/dsh-tasks');
+const root=fs.mkdtempSync(path.join(os.tmpdir(),'lilith-dsh-'));
+const pause=()=>new Promise(r=>setTimeout(r,10));
+async function until(test){for(let i=0;i<200;i++){if(test())return;await pause();}throw new Error('timeout');}
+(async()=>{let manager;try{
+  const work=path.join(root,'work'),outside=path.join(root,'outside');fs.mkdirSync(work);fs.mkdirSync(outside);
+  fs.writeFileSync(path.join(work,'input.txt'),'第一行\n第二行');fs.writeFileSync(path.join(outside,'private.txt'),'excluded');
+  fs.symlinkSync(outside,path.join(work,'escape'));
+  const tools=createFileTools({workspace:work,allowWrite:true});assert.equal(tools.read('input.txt',2,1).text,'第二行');
+  assert.throws(()=>tools.read('../outside/private.txt'),/scope/);assert.throws(()=>tools.read('escape/private.txt'),/scope/);
+  assert.throws(()=>tools.write('escape/result.txt','bad'),/workspace/);assert.throws(()=>tools.write('../bad.txt','bad'),/workspace/);
+  tools.write('new.txt','产物');assert.throws(()=>tools.write('new.txt','overwrite'),/EEXIST/);
+  assert.throws(()=>createFileTools({workspace:work}).write('denied.txt','no'),/disabled/);
+  assert.equal(createFileTools({workspace:work,readRoots:[path.join(outside,'private.txt')]}).read(path.join(outside,'private.txt')).text,'excluded');
+  const priorPolicy=process.env.LILITH_DSH_POLICY;
+  process.env.LILITH_DSH_POLICY=JSON.stringify({workspace:work,allowWrite:false,allowWeb:false});
+  const registered=[],guards=[];const plugin=await import('../src/dsh-tools.mjs');
+  plugin.apply({tools:{register:t=>registered.push(t),guard:g=>guards.push(g)}});
+  assert.equal(guards[0]({name:'bash'}),'lilith_capability_not_enabled');
+  assert.equal(guards[0]({name:'web_fetch'}),'lilith_capability_not_enabled');
+  assert.equal(guards[0]({name:'lilith_read_file'}),undefined);
+  assert.equal(registered.find(t=>t.name==='lilith_read_file').parameters.type,'object');
+  assert.ok(!registered.some(t=>t.name==='lilith_create_file'));
+  if(priorPolicy===undefined)delete process.env.LILITH_DSH_POLICY;else process.env.LILITH_DSH_POLICY=priorPolicy;
+  let executions=0,lastOptions,resumed=false,hold=false,release,lastPrompt='',notesSent=0;const deliveries=[];
+  const config={mock_mode:false,provider:{api_key:'fake',model:'fake'},integrations:{dsh:{enabled:true,executable:process.execPath,allow_write:true}}};
+  manager=createDshTasks({dataRoot:root,getConfig:()=>config,onDelivery:t=>deliveries.push(t),runtimeFactory:options=>{
+    executions++;lastOptions=options;return {ready:Promise.resolve(),acceptingPrompts:true,
+      async rpc(method,payload){assert.equal(method,'session/prompt');assert.match(payload.contentBlocks[0].text,/补充/);notesSent++;},
+      async run(sessionId,prompt,resume){resumed=resume;lastPrompt=prompt;
+      if(hold)await new Promise(r=>release=r);
+      createFileTools(options.policy).write('result-'+executions+'.txt','actual output');
+      options.onEvent('session.event',{sessionId,event:{type:'assistant/message',data:{message:{role:'assistant',content:[{type:'text',text:JSON.stringify({status:'completed',text:'已读取并生成真实产物。'})}]}}}});
+      options.onEvent('session.event',{sessionId,event:{type:'turn/end',data:{reason:{kind:'completed'}}}});
+    },async close(){},async stop(){release?.();}};}});
+  const first=manager.submit({sessionId:'desktop-pet',requestId:'req1',message:'生成结果'});
+  assert.equal(manager.submit({sessionId:'desktop-pet',requestId:'req1',message:'生成结果'}).id,first.id);
+  await manager.dispatch({sessionId:'desktop-pet',requestId:'queued-note',message:'补充：输出中文',taskId:first.id});
+  await until(()=>manager.get(first.id).status==='completed');assert.equal(executions,1);assert.equal(deliveries.length,1);
+  assert.match(lastPrompt,/补充：输出中文/);
+  assert.match(deliveries[0].delivery_text,/真实产物/);assert.equal(manager.get(first.id).artifacts.length,1);
+  assert.throws(()=>manager.asset(first.id,'../config.json'),/invalid/);
+  const next=manager.submit({sessionId:'desktop-pet',requestId:'req2',message:'继续',taskId:first.id});
+  await until(()=>manager.get(next.id).status==='completed');assert.equal(resumed,true);assert.equal(manager.get(next.id).workspace,first.workspace);
+  assert.throws(()=>manager.submit({sessionId:'other',requestId:'cross',message:'继续',taskId:first.id}),/followup/);
+  hold=true;const stopped=manager.submit({sessionId:'desktop-pet',requestId:'req3',message:'等待'});
+  await until(()=>manager.get(stopped.id).status==='running');
+  const note={sessionId:'desktop-pet',requestId:'live-note',message:'补充：保留已有文件',taskId:stopped.id};
+  await manager.dispatch(note);await manager.dispatch(note);assert.equal(notesSent,1);
+  await manager.stop(stopped.id);await until(()=>manager.get(stopped.id).status==='stopped');
+  assert.notEqual(manager.get(stopped.id).status,'completed');
+  manager.deliverPending();assert.equal(deliveries.filter(t=>t.id===first.id).length,1);
+  manager.resetSession('desktop-pet');assert.equal(manager.list('desktop-pet').length,0);
+  await manager.close();
+  const reloaded=createDshTasks({dataRoot:root,getConfig:()=>config,onDelivery:()=>{throw Error('must not redeliver');}});
+  reloaded.deliverPending();assert.equal(reloaded.list().length,0);await reloaded.close();
+  console.log('dsh-tasks: scoped file effects, symlink rejection, deduplication, follow-up, cancellation, delivery and reset passed.');
+}finally{await manager?.close();fs.rmSync(root,{recursive:true,force:true});}})().catch(e=>{console.error(e);process.exitCode=1;});

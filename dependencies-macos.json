@@ -1,0 +1,74 @@
+{
+  "version": "0.3.4-macos.dev7.1",
+  "game": {
+    "version": "1.1.0",
+    "unity": "2021.3.45f2",
+    "architecture": "x86_64",
+    "redistributed": false
+  },
+  "native": {
+    "architecture": "x86_64",
+    "deployment_target": "11.0",
+    "frameworks": [
+      "AppKit",
+      "ApplicationServices",
+      "Foundation",
+      "CoreGraphics"
+    ],
+    "older_os_runtime_tested": false
+  },
+  "bepinex": {
+    "version": "6.0.0-be.790+4e98359",
+    "url": "https://builds.bepinex.dev/projects/bepinex_be/790/BepInEx-Unity.IL2CPP-macos-x64-6.0.0-be.790%2B4e98359.zip",
+    "sha256": "81b2afd2f044d76d636bdb51d1467852a0bef612862cac853ea0bd3334ac0bf0",
+    "original_loader_sha256": "afc9cc7e3c407cf1324c1cb669addd6fd162354ffec9bbb83b78c83ca6941305",
+    "license": "LGPL-2.1",
+    "redistributed": false,
+    "modified_binary_redistributed": false
+  },
+  "loader_runtime": {
+    "version": "6.0.7",
+    "architecture": "x86_64",
+    "source": "bundled with pinned BepInEx",
+    "support_status": "out_of_support",
+    "redistributed": false
+  },
+  "build_sdk": {
+    "tested_version": "8.0.426",
+    "required_major": 8,
+    "redistributed": false
+  },
+  "node": {
+    "required_major": 24,
+    "tested_version": "24.18.0",
+    "npm_dependencies": 0,
+    "lockfile": "companion/package-lock.json",
+    "redistributed": false,
+    "release_test_candidate": "24.22.1",
+    "candidate_archive_sha256": "89c682593d76cd44233fa53b1563264e7de9cbb189cad169135c5b4fadfbc0a7",
+    "candidate_url": "https://nodejs.org/dist/v24.22.1/node-v24.22.1-darwin-arm64.tar.gz",
+    "verified_portable_test_version": "24.22.1",
+    "builtin_sqlite": true
+  },
+  "optional": {
+    "dsh": {
+      "tested_version": "0.2.1-rc.2",
+      "transport": "stdio JSON-RPC",
+      "redistributed": false
+    },
+    "comfyui": {
+      "endpoint_default": "http://127.0.0.1:8188",
+      "workflow": "companion/workflows/lilith-zimage-local.json",
+      "models_redistributed": false
+    },
+    "qq": {
+      "adapter": "direct OneBot v11 HTTP/HMAC-SHA1",
+      "napcat_pinned_version": "4.18.41",
+      "napcat_zip_sha256": "6801f93e533846cea05f4f531874a0e84371ab2331c5585b57cd7e3b869cf96b",
+      "napcat_license": "custom Limited Redistribution License",
+      "qq_local_bundle_version": "7.0.2-53644",
+      "redistributed": false,
+      "live_login_and_message_test": "user_accepted_private_and_group_text_beta"
+    }
+  }
+}

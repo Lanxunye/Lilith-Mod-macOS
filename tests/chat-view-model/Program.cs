@@ -1,0 +1,205 @@
+using System;
+using System.Collections.Generic;
+using System.Text.Json;
+using LilithMod;
+
+var model = new ChatViewModel();
+
+using (JsonDocument citationDocument = JsonDocument.Parse("""
+{
+  "citations": [
+    { "title": "One", "url": "https://example.test/one" },
+    { "title": "Duplicate", "url": "https://example.test/one" },
+    { "title": "Blocked", "url": "file:///C:/secret.txt" },
+    { "title": "Two", "url": "http://example.test/two" }
+  ]
+}
+"""))
+{
+    IReadOnlyList<ChatCitation> citations = CompanionCitationParser.Parse(citationDocument.RootElement);
+    if (citations.Count != 2
+        || citations[0].Title != "One"
+        || citations[1].Url != "http://example.test/two")
+    {
+        throw new InvalidOperationException("Companion citations were not parsed or filtered correctly.");
+    }
+    model.Add(ChatSpeaker.Lilith, "Grounded reply", citations);
+    if (model.Messages[^1].Citations?.Count != 2)
+    {
+        throw new InvalidOperationException("Current-run citations were not retained on the chat message.");
+    }
+    model.Clear();
+}
+
+var citationMergeModel = new ChatViewModel();
+var currentRunCitations = new List<ChatCitation>
+{
+    new("Current source", "https://example.test/current")
+};
+citationMergeModel.Add(ChatSpeaker.User, "Current question");
+citationMergeModel.Add(ChatSpeaker.Lilith, "Current answer", currentRunCitations);
+citationMergeModel.MergeHistory(new List<CompanionHistoryMessage>
+{
+    new("user", "Current question"),
+    new("assistant", "Current answer")
+});
+if (citationMergeModel.Messages.Count != 2
+    || citationMergeModel.Messages[^1].Citations?.Count != 1)
+{
+    throw new InvalidOperationException("History reconciliation duplicated or discarded current-run citations.");
+}
+
+model.ReplaceHistory(new List<CompanionHistoryMessage>
+{
+    new("user", "你好"),
+    new("assistant", "我在。")
+});
+
+if (model.Messages.Count != 2
+    || model.Messages[0].Speaker != ChatSpeaker.User
+    || model.Messages[1].Speaker != ChatSpeaker.Lilith)
+{
+    throw new InvalidOperationException("Persisted roles were not mapped into the view model.");
+}
+
+if (model.AddLilithIfNotLast("我在。"))
+{
+    throw new InvalidOperationException("The last assistant opener must be deduplicated.");
+}
+if (!model.AddLilithIfNotLast("我们继续吧。") || model.Messages.Count != 3)
+{
+    throw new InvalidOperationException("A new assistant opener must be appended.");
+}
+
+model.MergeHistory(new List<CompanionHistoryMessage>
+{
+    new("user", "更早的问题"),
+    new("assistant", "更早的回答"),
+    new("user", "你好"),
+    new("assistant", "我在。")
+});
+if (model.Messages.Count != 5
+    || model.Messages[0].Text != "更早的问题"
+    || model.Messages[^1].Text != "我们继续吧。")
+{
+    throw new InvalidOperationException("Loaded history and immediate local messages were not merged correctly.");
+}
+
+model.SetBusy(true, "正在想……");
+if (!model.IsBusy || model.Status != "正在想……")
+{
+    throw new InvalidOperationException("Busy state was not retained.");
+}
+
+model.Clear();
+if (model.Messages.Count != 0)
+{
+    throw new InvalidOperationException("Clearing the session must clear the visible history.");
+}
+
+static void ScaleEquals(float expected, int height)
+{
+    float actual = ChatUiScale.Calculate(height);
+    if (Math.Abs(actual - expected) > 0.001f)
+    {
+        throw new InvalidOperationException($"Unexpected UI scale for {height}px: {actual}");
+    }
+}
+
+ScaleEquals(0.85f, 768);
+ScaleEquals(1f, 1080);
+ScaleEquals(1.3333334f, 1440);
+ScaleEquals(2f, 2160);
+ScaleEquals(2.5f, 4320);
+
+if (ChatUiScale.ClampUserScale(0.2f) != 0.5f
+    || ChatUiScale.ClampUserScale(1.25f) != 1.25f
+    || ChatUiScale.ClampUserScale(3f) != 2f)
+{
+    throw new InvalidOperationException("User UI scale must stay within 50%-200%.");
+}
+float constrainedHeight = ChatUiScale.FitPanelHeight(904f, 2f, 156f, 500f, 18f);
+if (Math.Abs(constrainedHeight - 434f) > 0.001f
+    || ChatUiScale.FitPanelHeight(1080f, 2f, 156f, 500f, 18f) != 500f)
+{
+    throw new InvalidOperationException("Expanded chat height must remain visible at large user scales.");
+}
+
+if (ChatPanelPlacement.OppositeEdgeX(120f, 1920f, 560f, 1f, 18f) != 1342f)
+{
+    throw new InvalidOperationException("A character on the left must dock the chat panel on the right.");
+}
+if (ChatPanelPlacement.OppositeEdgeX(1800f, 1920f, 560f, 1f, 18f) != 18f)
+{
+    throw new InvalidOperationException("A character on the right must dock the chat panel on the left.");
+}
+if (ChatPanelPlacement.OppositeEdgeXInArea(2100f, 1920f, 2460f, 560f, 0.7f, 18f) != 2050f)
+{
+    throw new InvalidOperationException("A character on the left side of a secondary monitor must dock within that monitor's right edge.");
+}
+if (ChatPanelPlacement.OppositeEdgeXInArea(2400f, 1920f, 2460f, 560f, 0.7f, 18f) != 1938f)
+{
+    throw new InvalidOperationException("A character on the right side of a secondary monitor must dock within that monitor's left edge.");
+}
+if (!ChatPanelPlacement.OverlapsCharacter(24f, 560f, 1f, 600f)
+    || ChatPanelPlacement.OverlapsCharacter(24f, 560f, 1f, 1100f))
+{
+    throw new InvalidOperationException("Character overlap clearance was calculated incorrectly.");
+}
+
+if (NoteConversationText.Normalize(
+        "出门要好好照顾自己。桌面我帮你看着，一切安好。——莉莉丝")
+    != "出门要好好照顾自己。桌面我帮你看着，一切安好。"
+    || NoteConversationText.Normalize("普通台词") != "普通台词")
+{
+    throw new InvalidOperationException("Lilith note signatures must not be repeated in chat history.");
+}
+
+var seedQueue = new ConversationSeedQueue();
+seedQueue.Start();
+if (!seedQueue.TryQueue("立即发送") || !seedQueue.TryQueue("重复发送"))
+{
+    throw new InvalidOperationException("Messages must be queued while an assistant opener is being written.");
+}
+if (seedQueue.Complete() != "立即发送" || seedQueue.Pending)
+{
+    throw new InvalidOperationException("Only the first immediate message should run after the opener completes.");
+}
+if (seedQueue.TryQueue("不应排队"))
+{
+    throw new InvalidOperationException("Messages must not queue when no opener is pending.");
+}
+
+Console.WriteLine("Chat view model tests passed.");
+
+var stickerModel = new ChatViewModel();
+string stickerId = "12f2a78a-c61b-4030-9894-8baf5a603175";
+stickerModel.Add(ChatSpeaker.User, "今天不错");
+if (!stickerModel.AddSticker(stickerId, "") || stickerModel.AddSticker(stickerId, "重复")
+    || stickerModel.AddSticker("invalid-path", "无效"))
+    throw new InvalidOperationException("Sticker messages must allow no caption, validate IDs, and deduplicate delivery.");
+stickerModel.MergeHistory(new List<CompanionHistoryMessage>
+{
+    new("user", "今天不错"),
+    new("assistant", "", stickerId)
+});
+if (stickerModel.Messages.Count != 2 || stickerModel.Messages[^1].ArtworkId != stickerId)
+    throw new InvalidOperationException("Restored image history must preserve sticker identity without duplicate messages.");
+stickerModel.Clear();
+if (!stickerModel.AddSticker(stickerId, "重载"))
+    throw new InvalidOperationException("Clearing chat must clear message delivery identity.");
+
+var studio = StudioWindowBounds.Clamp(900f, -100f, 340f, 1000f, 800f);
+if (studio.X != 642f || studio.Y != 18f || studio.Height != 426f)
+    throw new InvalidOperationException("Dragging must keep the studio window inside the visible canvas.");
+studio = StudioWindowBounds.Clamp(0, 0, 900, 1000, 600);
+if (studio.Width != 478f || studio.Height != 564f)
+    throw new InvalidOperationException("Studio resize must respect both screen dimensions and keep its image square.");
+studio = StudioWindowBounds.Clamp(float.NaN, float.PositiveInfinity, -1, 300, 500);
+if (!float.IsFinite(studio.X) || !float.IsFinite(studio.Y) || studio.Width != 260f)
+    throw new InvalidOperationException("Invalid or stale studio geometry must recover to usable bounded values.");
+
+namespace LilithMod
+{
+    internal sealed record CompanionHistoryMessage(string Role, string Content, string? StickerId = null);
+}

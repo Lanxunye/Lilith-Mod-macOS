@@ -1,0 +1,30 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),http=require('node:http');
+const root=fs.mkdtempSync(path.join(os.tmpdir(),'lilith-dsh-routing-'));
+process.env.LILITH_AI_DATA_DIR=root;process.env.LILITH_AI_CONFIG=path.join(root,'config.json');
+let app,fake,runs=0,providerCalls=0,prompt='';
+(async()=>{try{
+  fake=http.createServer(async(req,res)=>{let s='';for await(const c of req)s+=c;const body=JSON.parse(s);providerCalls++;prompt=body.messages[0].content;
+    const message=body.messages.at(-1).content;const task=message.includes('报告');
+    res.setHeader('Content-Type','application/json');res.end(JSON.stringify({choices:[{message:{content:JSON.stringify({text:task?'我来处理。':'我在这里陪你。',emotion:'happy',animation:'idle',memory_updates:[],...(task?{task_action:{kind:'delegate',goal:'生成用户请求的报告'}}:{})})}}]}));});
+  await new Promise(r=>fake.listen(0,'127.0.0.1',r));
+  fs.writeFileSync(process.env.LILITH_AI_CONFIG,JSON.stringify({mock_mode:false,media:{enabled:false},provider:{kind:'deepseek',api_key:'fake',model:'fake',base_url:`http://127.0.0.1:${fake.address().port}`},integrations:{dsh:{enabled:true,transport:'stdio',executable:process.execPath}}}));
+  app=require('../src/server').createApp({taskOptions:{runtimeFactory:o=>({ready:Promise.resolve(),async run(id){runs++;
+    o.onEvent('session.event',{sessionId:id,event:{type:'assistant/message',data:{content:[{type:'text',text:'实际任务已完成'}]}}});
+    o.onEvent('session.event',{sessionId:id,event:{type:'turn/end',data:{reason:{kind:'completed'}}}});},async close(){},async stop(){}})}});
+  await new Promise(r=>app.server.listen(0,'127.0.0.1',r));const base=`http://127.0.0.1:${app.server.address().port}`;
+  async function call(route,body,auth=true,method=body?'POST':'GET'){const r=await fetch(base+route,{method,headers:{'Content-Type':'application/json',...(auth?{Authorization:'Bearer '+app.token}:{})},body:body?JSON.stringify(body):undefined});return {status:r.status,body:await r.json()};}
+  assert.equal((await call('/v1/tasks',undefined,false)).status,401);
+  const chat=m=>call('/v1/session/desktop-pet/message',{player:{name:'测试'},...m});
+  await chat({message:'今天好累',request_id:'chat'});assert.equal(runs,0);assert.match(prompt,/task delegation/);
+  const auto=await chat({message:'帮我生成报告',request_id:'auto'});assert.ok(auto.body.task.id);
+  await new Promise(r=>setTimeout(r,30));assert.equal(runs,1);
+  await chat({message:'帮我生成报告',request_id:'no-task',task_mode:'chat'});assert.equal(runs,1);
+  const before=providerCalls;const manual=await chat({message:'处理指定任务',request_id:'manual',task_mode:'dsh'});
+  assert.ok(manual.body.task.id);assert.equal(providerCalls,before);await new Promise(r=>setTimeout(r,30));
+  assert.equal(runs,2);const history=(await call('/v1/session/desktop-pet/history')).body.messages;
+  assert.equal(history.filter(m=>m.task_delivery_id===auto.body.task.id).length,1);
+  assert.equal((await call('/v1/settings',{integrations:{dsh:{read_roots:'relative/path'}}},true,'PATCH')).status,400);
+  await call('/v1/control',{action:'reset_session',session_id:'desktop-pet'});assert.equal((await call('/v1/tasks')).body.tasks.length,0);
+  console.log('dsh-routing: authenticated tasks, companion routing, chat override, manual dispatch, final history and reset passed.');
+}finally{await app?.tasks.close();await app?.mediaMonitor.stop();if(app)await new Promise(r=>app.server.close(r));if(fake)await new Promise(r=>fake.close(r));fs.rmSync(root,{recursive:true,force:true});}})().catch(e=>{console.error(e);process.exitCode=1;});

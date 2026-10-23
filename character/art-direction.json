@@ -1,0 +1,27 @@
+{
+  "version": "lilith-art-v2-20261021",
+  "source_notes": "Derived from sampled game icon, avatar, game-render silhouette and three local texture previews; see art-reference.md. Costume is a default, not an immutable canon restriction.",
+  "identity_prompt": "One original anime game heroine, very long silver-white twin-tail hair with cool blue cel-shaded shadows, pink-red eyes, delicate dark eyelashes, side-swept bangs. A smooth rounded human scalp silhouette, paired large folded black satin ribbon bows and a thin flat black headband patterned with white triangles; every head accessory is folded fabric or a flat band.",
+  "style_prompt": "Expressive 2D anime game illustration, delicate crisp dark line art, clean cel-shaded shapes, restrained white, cool blue and dark navy-black palette, clear readable silhouette and careful facial expression. Default costume: white ruffled blouse and neck bow, dark fitted waist and asymmetric skirt, contrasting black-and-white stockings. Match the game character rather than another character named Lilith.",
+  "personality_prompt": "Warm, curious, gently mischievous and subtly teasing, with an independent personality. Genuine thoughtfulness, uncertainty, sadness or mild annoyance are allowed when appropriate. Intimacy is understated and contextual, without forced declarations, cruel humiliation, coercion or exaggerated possessiveness. Ending-1 relationship continues; imagined pictures are not proof of new shared memories.",
+  "sticker_prompt": "Single expressive reaction sticker, head-and-shoulders chibi interpretation of the same heroine, one clear emotional gesture, large legible face, simplified clean contour, plain light background, generous blank margin beneath the drawing. One cohesive unlettered picture.",
+  "illustration_prompt": "One cohesive finished illustration. Clear main subject, balanced composition, scene and lighting serving the current emotion. Use the default design unless an explicitly requested costume or medium changes that part of the design. No unrelated characters or invented personal memories.",
+  "consistency_prompt": "Keep the same silver-white twin-tail hair, pink-red eyes, recognizable delicate face and rounded human head silhouette. Hair decoration is entirely flat patterned headband and soft folded ribbon bows. Preserve warm independent personality, contextual expression and explicitly requested costume or art-medium variation.",
+  "negative_prompt": "low quality, muddy lines, bad anatomy, extra fingers, missing fingers, extra limbs, duplicated person, wrong eye color, blonde hair, fox ears, fox tail, biological horns, unrelated character, watermark, logo, illegible lettering, animal ears, cat ears, text, captions, letters",
+  "moods": {
+    "gentle": "Soft attentive expression, caring without a forced smile.",
+    "playful": "A subtle sly smile and light teasing gesture, never contempt.",
+    "happy": "Bright pleased expression and relaxed lively pose.",
+    "shy": "A little blush and tentative eye contact, restrained emotion.",
+    "thoughtful": "Quiet reflective gaze, curious and sincere.",
+    "sad": "Honest restrained sadness, no theatrical cruelty.",
+    "surprised": "Wide eyes and a clear small startled gesture.",
+    "annoyed": "A small pout or mild skeptical look, personal boundaries without humiliation."
+  },
+  "limitations": [
+    "Text conditioning lowers drift but cannot guarantee visual identity or character consistency.",
+    "This local workflow is text-to-image and has no character-reference/LoRA input.",
+    "Z-Image Turbo uses cfg=1, so negative conditioning may have little effect; key identity constraints are repeated in positive conditioning.",
+    "Plain background is not a true alpha cutout. Sticker captions are rendered locally, separately from diffusion."
+  ]
+}

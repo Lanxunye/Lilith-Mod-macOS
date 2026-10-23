@@ -1,0 +1,33 @@
+{
+  "version": "0.3.4-macos.dev7.1",
+  "date": "2026-10-23",
+  "game_version": "1.1.0",
+  "unity_version": "2021.3.45f2",
+  "architecture": "x86_64 via Rosetta",
+  "bepinex": "6.0.0-be.790+4e98359",
+  "node_tests": 25,
+  "managed_tests": 5,
+  "dsh": "passed_native_chat_auto_delegate_sdk_file_tasks_resume_cancel_and_download",
+  "comfy": "passed_local_zimage_qwen4b_autonomous_illustration_sticker_game_preview_png_export",
+  "qq": "beta_user_accepted_private_and_group_text_speaker_quote_update_deployed",
+  "qq_desktop_sync": "compiled_not_yet_game_runtime_verified",
+  "chat_stickers": "passed_real_Unity_chat_and_web_inline_image_rolling_3_turn_limit",
+  "native_chat_editor": "passed_chinese_paste_key_focus_and_edit_shortcuts",
+  "ime_candidate_follow": "passed_user_confirmed_normal",
+  "studio_layout": "passed_menu_move_resize_and_restart_restore_drag_gesture_pending",
+  "long_session_stability": "unverified_input_or_cua_window_issue_after_2h24m",
+  "artifacts": {
+    "plugin": {
+      "sha256": "553ad8cf697426fd14517893a5cb53340ce4b13a0dcd7ed5e5828a70b777af1b"
+    },
+    "native_bridge": {
+      "sha256": "6b90c1a3c0099ad4f7815ff7d0d22a20e255a421ebabbfaf27f9ee188070978f"
+    },
+    "loader": {
+      "sha256": "005aeb2164a2ca379ad2502ec0e46aa43f263b0c6f71d6175472353cef844533"
+    },
+    "loader_compat": {
+      "sha256": "ea258b8cc7548a4c86edb31b182e8886ebdd6715b84f68f49a4ccc7bd105944e"
+    }
+  }
+}

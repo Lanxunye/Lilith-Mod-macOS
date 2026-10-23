@@ -1,0 +1,21 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path');
+const {ConversationStore}=require('../src/conversation-store');
+const root=fs.mkdtempSync(path.join(os.tmpdir(),'lilith-journal-'));
+(async()=>{let store=new ConversationStore(root);try{
+ const owner=store.ownerId;const payload={message:'我周六去看海'};
+ store.begin('desktop-pet','one',payload);
+ store.commit('desktop-pet','one',payload.message,{text:'我记住了'},'qq','persona',{target:'111111',text:'我记住了'},{updates:[{key:'计划',value:'周六去看海',evidence:'周六去看海'}],sensitive:()=>false});
+ store.begin('desktop-pet','crash',{message:'未完成'});
+ store.db.exec("UPDATE outbox SET state='sending'");store.close();store=new ConversationStore(root);
+ assert.equal(store.ownerId,owner);assert.equal(store.begin('desktop-pet','one',payload).text,'我记住了');
+ assert.throws(()=>store.begin('desktop-pet','crash',{message:'未完成'}),/request_interrupted/);
+ assert.equal(store.outbox()[0].state,'unknown');
+ store.reset('desktop-pet');assert.equal(store.recent('desktop-pet').length,0);
+ assert.equal(store.facts('desktop-pet').length,1,'new conversation retains long-term memory');
+ assert.ok(store.db.prepare('SELECT 1 FROM messages WHERE id=?').get(store.facts('desktop-pet')[0].source_id),'fact provenance survives reset');
+ assert.equal(store.facts('another-session').length,0,'stable owner does not merge unrelated sessions');
+ store.clearDerived();assert.equal(store.facts('desktop-pet').length,0);assert.equal(store.pendingSummary('desktop-pet').length,0);
+ let sequence=[];await Promise.all([store.serial('shared',async()=>{await new Promise(r=>setTimeout(r,10));sequence.push(1);}),store.serial('shared',async()=>sequence.push(2))]);assert.deepEqual(sequence,[1,2]);
+ console.log('conversation-store: atomic turn/fact/outbox, crash recovery, stable identity, session isolation, reset provenance, forget cutoff and serialized writes passed.');
+}finally{store.close();fs.rmSync(root,{recursive:true,force:true});}})().catch(e=>{console.error(e);process.exitCode=1;});

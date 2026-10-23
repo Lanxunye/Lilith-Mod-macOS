@@ -1,0 +1,37 @@
+name: macOS port portable tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  portable-tests:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: companion/package-lock.json
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Install locked dependency-free Companion
+        run: npm ci --ignore-scripts --prefix companion
+      - name: Companion tests
+        run: npm test --prefix companion
+      - name: Managed portable tests
+        shell: bash
+        run: |
+          for project in tests/chat-view-model/*.csproj tests/cross-screen-ground/*.csproj tests/dialogue-formatter/*.csproj tests/player-line-options/*.csproj tests/runtime-resources/*.csproj; do
+            dotnet run --project "$project" -c Release
+          done
+# Game/interop-dependent plugin build is local only. No release or upload job.

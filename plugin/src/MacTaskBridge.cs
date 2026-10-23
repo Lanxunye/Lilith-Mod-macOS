@@ -1,0 +1,83 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
+using UnityEngine;
+
+namespace LilithMod;
+
+internal static class TaskChatMode
+{
+    private static string? _mode;
+    internal static string Mode
+    {
+        get
+        {
+            if (_mode is not null) return _mode;
+            try
+            {
+                using var doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(ModPaths.DataRoot, "task-ui.json")));
+                _mode = doc.RootElement.GetProperty("mode").GetString();
+            }
+            catch
+            {
+                try
+                {
+                    using var config = JsonDocument.Parse(File.ReadAllText(Path.Combine(ModPaths.DataRoot, "config.json")));
+                    _mode = config.RootElement.GetProperty("integrations").GetProperty("dsh").GetProperty("default_mode").GetString();
+                }
+                catch { }
+            }
+            return _mode = _mode is "auto" or "chat" or "dsh" ? _mode : "auto";
+        }
+        set
+        {
+            _mode = value is "auto" or "chat" or "dsh" ? value : "auto";
+            try { File.WriteAllText(Path.Combine(ModPaths.DataRoot, "task-ui.json"), JsonSerializer.Serialize(new { mode = _mode })); }
+            catch { }
+        }
+    }
+    internal static string Label => Mode == "chat" ? "仅聊天" : Mode == "dsh" ? "本条交给 DSH" : "自动协作";
+    internal static void Cycle() => Mode = Mode == "auto" ? "chat" : Mode == "chat" ? "dsh" : "auto";
+}
+
+internal sealed class MacTaskBridge
+{
+    private float _nextPoll;
+    private bool _initialized;
+    private readonly HashSet<string> _delivered = new();
+    internal void Tick(UnityChatView? view, Func<bool> canDeliver, Action<string> deliver)
+    {
+        if (view is null || Time.unscaledTime < _nextPoll) return;
+        _nextPoll = Time.unscaledTime + 1f;
+        string root = Path.Combine(ModPaths.DataRoot, "dsh-tasks");
+        if (!Directory.Exists(root)) return;
+        try
+        {
+            string[] files = Directory.GetFiles(root, "*.json")
+                .Where(f => Guid.TryParse(Path.GetFileNameWithoutExtension(f), out _))
+                .OrderBy(File.GetLastWriteTimeUtc).ToArray();
+            string status = "任务按需委托", goal = "";
+            foreach (string file in files)
+            {
+                using var doc = JsonDocument.Parse(File.ReadAllText(file));
+                JsonElement t = doc.RootElement;
+                if (Text(t, "session_id") != "desktop-pet" || (t.TryGetProperty("archived", out var archived) && archived.ValueKind == JsonValueKind.True)) continue;
+                string id = Text(t, "id"), phase = Text(t, "status");
+                status = phase switch { "queued" => "等待执行", "starting" => "准备中", "running" => "执行中", "stopping" => "正在停止", "completed" => "已完成", "needs_input" => "需要补充", "stopped" => "已停止", "interrupted" => "已中断", _ => "未完成" };
+                goal = Text(t, "goal");
+                bool terminal = phase is "completed" or "needs_input" or "failed" or "stopped" or "interrupted";
+                if (!_initialized && terminal) _delivered.Add(id);
+                string text = Text(t, "delivery_text");
+                if (_initialized && terminal && text.Length > 0 && !_delivered.Contains(id) && canDeliver())
+                { deliver(text); _delivered.Add(id); }
+            }
+            _initialized = true;
+            view.SetTaskStatus(status, goal);
+        }
+        catch { /* Atomic state may be replaced between polls; retry next frame interval. */ }
+    }
+    private static string Text(JsonElement item, string key) => item.TryGetProperty(key, out var value)
+        && value.ValueKind == JsonValueKind.String ? value.GetString() ?? "" : "";
+}
