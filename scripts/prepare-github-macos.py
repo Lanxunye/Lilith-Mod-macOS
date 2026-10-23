@@ -105,7 +105,7 @@ def main():
         s=p.read_text();s=re.sub(r'\[([^\]]+)\]\(evidence/[^)]+\)',r'\1（本机验收材料未公开）',s);p.write_text(s)
     metadata=json.loads((ROOT/'macos-release.json').read_text())
     public_keys=['version','date','game_version','unity_version','architecture','bepinex','node_tests','managed_tests',
-                 'dsh','comfy','qq','qq_desktop_sync','chat_stickers','native_chat_editor','ime_candidate_follow','studio_layout','long_session_stability']
+                 'dsh','comfy','qq','qq_desktop_sync','chat_stickers','native_chat_editor','ime_candidate_follow','studio_layout','long_session_stability','spaces_follow']
     public_metadata = {k:metadata[k] for k in public_keys if k in metadata}
     public_metadata['artifacts'] = {name:{'sha256':metadata['artifacts'][name]['sha256']}
         for name in ['plugin','native_bridge','loader','loader_compat']}

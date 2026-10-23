@@ -1,5 +1,5 @@
 {
-  "version": "0.3.4-macos.dev7.1",
+  "version": "0.3.4-macos.dev7.2",
   "date": "2026-10-23",
   "game_version": "1.1.0",
   "unity_version": "2021.3.45f2",
@@ -16,12 +16,13 @@
   "ime_candidate_follow": "passed_user_confirmed_normal",
   "studio_layout": "passed_menu_move_resize_and_restart_restore_drag_gesture_pending",
   "long_session_stability": "unverified_input_or_cua_window_issue_after_2h24m",
+  "spaces_follow": "native_policy_test_passed_pending_physical_restart_test",
   "artifacts": {
     "plugin": {
       "sha256": "553ad8cf697426fd14517893a5cb53340ce4b13a0dcd7ed5e5828a70b777af1b"
     },
     "native_bridge": {
-      "sha256": "6b90c1a3c0099ad4f7815ff7d0d22a20e255a421ebabbfaf27f9ee188070978f"
+      "sha256": "39eb60a4d6bb67357ccbe01a8d62618095127bdf686ab1420ee56a35277d6e26"
     },
     "loader": {
       "sha256": "005aeb2164a2ca379ad2502ec0e46aa43f263b0c6f71d6175472353cef844533"

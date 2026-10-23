@@ -18,6 +18,7 @@ static Class keyableChatWindowClass;
 static BOOL chatCanBecomeKey(id self, SEL selector) { return YES; }
 extern int lilith_editor_focus(void);
 void *lilith_player_window(void);
+int lilith_follow_spaces(void *handle);
 void lilith_begin_input(void) {
     if (inputMonitor) return;
     NSEventMask mask = NSEventMaskLeftMouseDown | NSEventMaskLeftMouseUp | NSEventMaskRightMouseDown
@@ -79,6 +80,13 @@ void lilith_popup_menu(void (*callback)(int), const char *chat, const char *musi
 }
 
 void lilith_schedule_tick(void *context, dispatch_function_t callback, double delay) {
+    // The game's window setup can overwrite collectionBehavior, or replace the
+    // Unity window. Re-resolve it periodically, including while Unity is idle.
+    // Keep this in the existing native tick ABI so installed plugins need only
+    // the matching dylib update, not a managed plugin replacement.
+    static unsigned spacesTick;
+    if ([NSThread isMainThread] && (spacesTick++ % 30) == 0)
+        lilith_follow_spaces(lilith_player_window());
     dispatch_after_f(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delay * NSEC_PER_SEC)),
                      dispatch_get_main_queue(), context, callback);
 }
@@ -113,6 +121,20 @@ void *lilith_player_window(void) {
     return NULL;
 }
 
+// Ordinary desktop Spaces share one pet window. Do not move the window's
+// frame or steal focus, and do not alter floating/click-through/fullscreen policy.
+int lilith_follow_spaces(void *handle) {
+    if (![NSThread isMainThread]) return 0;
+    NSWindow *window = (__bridge NSWindow *)handle;
+    if (!window || ![[NSApp windows] containsObject:window]) return 0;
+    NSWindowCollectionBehavior previous = window.collectionBehavior;
+    // AppKit defines these two behaviors as mutually exclusive.
+    NSWindowCollectionBehavior next = (previous & ~NSWindowCollectionBehaviorMoveToActiveSpace)
+        | NSWindowCollectionBehaviorCanJoinAllSpaces;
+    if (previous != next) window.collectionBehavior = next;
+    return (window.collectionBehavior & NSWindowCollectionBehaviorCanJoinAllSpaces) != 0;
+}
+
 int lilith_fit_primary_screen(void *handle) {
     NSWindow *window = (__bridge NSWindow *)handle;
     NSScreen *screen = NSScreen.screens.firstObject;
@@ -135,6 +157,9 @@ const char *lilith_window_diagnostics(void) {
             @"canBecomeKey": @(window.canBecomeKeyWindow), @"class": NSStringFromClass(window.class),
             @"ignoresMouseEvents": @(window.ignoresMouseEvents),
             @"style": @(window.styleMask), @"level": @(window.level),
+            @"collectionBehavior": @(window.collectionBehavior),
+            @"joinsAllSpaces": @((window.collectionBehavior & NSWindowCollectionBehaviorCanJoinAllSpaces) != 0),
+            @"onActiveSpace": @(window.onActiveSpace),
             @"frame": NSStringFromRect(window.frame),
             @"backgroundAlpha": @(window.backgroundColor.alphaComponent),
             @"viewClass": NSStringFromClass(view.class),

@@ -7,3 +7,7 @@ trap 'rm -rf "$OUTPUT"' EXIT
 clang -arch x86_64 -mmacosx-version-min=11.0 -fobjc-arc \
     -framework Foundation -framework AppKit "$ROOT/native/tests/class-namespace.m" -o "$OUTPUT/check"
 /usr/bin/arch -x86_64 "$OUTPUT/check" "$LIBRARY"
+
+clang -arch x86_64 -mmacosx-version-min=11.0 -fobjc-arc \
+    -framework Foundation -framework AppKit "$ROOT/native/tests/spaces-policy.m" -o "$OUTPUT/spaces-check"
+/usr/bin/arch -x86_64 "$OUTPUT/spaces-check" "$LIBRARY"

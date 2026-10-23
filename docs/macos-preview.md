@@ -1,4 +1,4 @@
-# macOS 开发预览 · 0.3.4-macos.dev7.1
+# macOS 开发预览 · 0.3.4-macos.dev7.2
 
 这是官方 macOS 游戏的 Mod 移植源码与插件预览，**尚不是解压即用的正式安装包**。当前按本机游戏 1.1.0 / Unity 2021.3.45f2 / x86_64 分支验证；Apple Silicon 通过 Rosetta 运行游戏与加载器。
 
