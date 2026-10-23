@@ -16,7 +16,7 @@
   "ime_candidate_follow": "passed_user_confirmed_normal",
   "studio_layout": "passed_menu_move_resize_and_restart_restore_drag_gesture_pending",
   "long_session_stability": "unverified_input_or_cua_window_issue_after_2h24m",
-  "spaces_follow": "native_policy_test_passed_pending_physical_restart_test",
+  "spaces_follow": "passed_user_accepted_live_official_game_desktop_spaces_switch",
   "artifacts": {
     "plugin": {
       "sha256": "553ad8cf697426fd14517893a5cb53340ce4b13a0dcd7ed5e5828a70b777af1b"
