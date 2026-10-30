@@ -20,6 +20,7 @@ const {features,analyzeAudio}=require('../src/music-audio');
  const pcm=Buffer.alloc(8000*4*4);for(let i=0;i<32000;i++)pcm.writeFloatLE(Math.sin(i*Math.PI*2*220/8000)*(i<16000?.1:.5),i*4);
  const f=features(pcm);assert.equal(f.analyzed_seconds,4);assert.equal(f.tempo_reliable,false);assert.equal(f.instruments,null);assert.ok(f.loudest[0].second>=2);
  assert.equal((await analyzeAudio(null)).state,'unavailable');
- const binary=path.join(root,'unknown');fs.writeFileSync(binary,'unknown cache');assert.equal((await analyzeAudio({file:binary})).reason,'cache_format_unrecognized');
+ const binary=path.join(root,'unknown');fs.writeFileSync(binary,'unknown cache');assert.equal((await analyzeAudio({file:binary},{ffmpeg:process.execPath,execute:async()=>{assert.fail('invalid cache must not reach the decoder');}})).reason,'cache_format_unrecognized');
+ assert.equal((await analyzeAudio({file:binary},{ffmpeg:path.join(root,'missing-ffmpeg')})).reason,'ffmpeg_unavailable');
  console.log('music-source: read-only SQLite/queue, exact IDs/performer conflicts, partial playlist coverage, paused state, operation allowlist and honest audio features passed');
 }finally{fs.rmSync(root,{recursive:true,force:true});}})().catch(e=>{console.error(e);process.exitCode=1;});

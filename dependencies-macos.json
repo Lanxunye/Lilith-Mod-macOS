@@ -78,6 +78,12 @@
       "qq_local_bundle_version": "7.0.2-53644",
       "redistributed": false,
       "live_login_and_message_test": "user_accepted_private_and_group_text_beta"
+    },
+    "music_audio": {
+      "decoder": "FFmpeg",
+      "required_for": "local cached audio statistics only",
+      "redistributed": false,
+      "without_decoder": "reports ffmpeg_unavailable; conversation and track metadata continue"
     }
   }
 }
