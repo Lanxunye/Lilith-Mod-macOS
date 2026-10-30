@@ -1,11 +1,16 @@
 'use strict';
-const readline=require('node:readline');let session='',completed=false,waiting=[];
+const readline=require('node:readline');let session='',completed=false,waiting=[];const opened=new Set();
 const send=o=>process.stdout.write(JSON.stringify(o)+'\n');
 const reply=(id,result={})=>send({jsonrpc:'2.0',id,result});
 readline.createInterface({input:process.stdin}).on('line',line=>{const f=JSON.parse(line);
   if(f.method==='initialize')reply(f.id,{serverInfo:{name:'test-only-runtime'}});
-  if(f.method==='session/resume')reply(f.id);
+  if(f.method==='session/resume'){
+    if(opened.has(f.params.sessionId))send({jsonrpc:'2.0',id:f.id,error:{message:'SDK session is already open or opening'}});
+    else if(f.params.sessionId==='resume-error')send({jsonrpc:'2.0',id:f.id,error:{message:'Session not found'}});
+    else {opened.add(f.params.sessionId);reply(f.id);}
+  }
   if(f.method==='session/prompt'){
+    opened.add(f.params.sessionId);
     session=f.params.sessionId;reply(f.id,{messageId:'fixture'});completed=false;
     if(f.params.contentBlocks[0].text==='hold')return;
     setTimeout(()=>{

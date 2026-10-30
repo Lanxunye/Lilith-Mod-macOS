@@ -1,0 +1,10 @@
+{
+  "character/lilith.json": "03b7c3946c6c67f02483f534ce84355cb98490875c047051d82dce7239d68759",
+  "character/lilith-style.json": "1c272a4e2c2a15ed36e95b9fec01b215c03d6648717767e3e29f02dd36efcc3e",
+  "character/locales/en/lilith.json": "25468421482b7793dd6fe766256d012e4c6e5c48a7cdfbee40c3d5e54f244080",
+  "character/locales/ja/lilith.json": "bf7b3e73fac948a19a5ba5b88a8e7235e10fd81767d70658ee38a7402b46919b",
+  "character/locales/zh-TW/lilith.json": "0c24145320f2f2f2962648549b3655bcd53609fa739a83c4ba4f4b36da1bc9e2",
+  "companion/src/lilith-style.js": "e4f5be476dab4a3e8d0a4dd353be819b6daa4ecc58ebcb6701bea1af3bd37ddf",
+  "dsh-feiyu-mood-lilith/lilith-style.json": "1c272a4e2c2a15ed36e95b9fec01b215c03d6648717767e3e29f02dd36efcc3e",
+  "dsh-feiyu-mood-lilith/style.cjs": "e4f5be476dab4a3e8d0a4dd353be819b6daa4ecc58ebcb6701bea1af3bd37ddf"
+}

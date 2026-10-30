@@ -1,0 +1,40 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path');
+const {EventEmitter}=require('node:events');
+const {ConversationStore}=require('../src/conversation-store');
+const {createChatSpeech,spokenText,ADAPTER}=require('../src/chat-speech');
+const root=fs.mkdtempSync(path.join(os.tmpdir(),'lilith-speech-test-'));
+const store=new ConversationStore(root);let speech;
+const pause=()=>new Promise(r=>setTimeout(r,10));
+async function wait(check){for(let n=0;n<200;n++){if(check())return;await pause();}throw Error('speech_test_timeout');}
+const wav=Buffer.alloc(2044);wav.write('RIFF');wav.writeUInt32LE(2036,4);wav.write('WAVEfmt ',8);wav.writeUInt32LE(16,16);wav.writeUInt16LE(1,20);wav.writeUInt16LE(1,22);wav.writeUInt32LE(24000,24);wav.writeUInt32LE(48000,28);wav.writeUInt16LE(2,32);wav.writeUInt16LE(16,34);wav.write('data',36);wav.writeUInt32LE(2000,40);
+(async()=>{try{
+ let requested=[],played=[],hold=null,delay=false,kills=0;
+ const request=async(url,opts)=>{
+  if(url.endsWith('/health'))return Response.json({adapter_sha256:ADAPTER});
+  requested.push(JSON.parse(opts.body).text);
+  if(delay)await new Promise(resolve=>hold=resolve);
+  return new Response(wav,{headers:{'Content-Type':'audio/wav'}});
+ };
+ const spawnPlayer=(bin,args)=>{assert.equal(bin,'/usr/bin/afplay');assert.equal(args.length,1);assert.ok(fs.readFileSync(args[0]).equals(wav));
+  played.push(args[0]);const c=new EventEmitter();c.kill=()=>{kills++;queueMicrotask(()=>c.emit('exit',143));};setTimeout(()=>c.emit('exit',0),30);return c;};
+ store.appendAssistant('desktop-pet','old-history','过去的消息不重播。');
+ speech=createChatSpeech({root,store,request,spawnPlayer,autoTick:false});
+ assert.equal(speech.status().enabled,false);speech.poll();assert.equal(requested.length,0);
+ assert.throws(()=>speech.patch({enabled:'true'}),/invalid_speech_settings/);
+ speech.patch({enabled:true});speech.poll();assert.equal(requested.length,0);
+ store.appendAssistant('desktop-pet','new-1','新消息一。');speech.poll();speech.poll();await wait(()=>played.length===1&&speech.status().status==='idle');
+ assert.deepEqual(requested,['新消息一。'],'polling never repeats a committed message');
+ store.db.prepare("INSERT INTO messages(id,session,request_id,channel,role,content,created_at,persona_hash) VALUES (?,?,?,?,?,?,?,?)").run('qq-1','desktop-pet','qq:1','qq','assistant','QQ消息不发声。',new Date().toISOString(),'test');
+ store.appendAssistant('desktop-pet','seed:native','原游戏配音不再读一遍。');speech.poll();await pause();assert.equal(played.length,1);
+ speech.enqueue('part-a','第一条。');speech.enqueue('part-b','第二条。');await wait(()=>played.length===3&&speech.status().status==='idle');
+ assert.deepEqual(requested.slice(-2),['第一条。','第二条。']);
+ delay=true;speech.enqueue('stale','准备合成的旧话。');await wait(()=>hold!==null);speech.patch({enabled:false});hold();await wait(()=>speech.status().status==='idle');await pause();assert.equal(played.length,3,'late audio after disabling must never play');
+ delay=false;speech.patch({enabled:true});speech.enqueue('playing','正在播放的旧话。');await wait(()=>played.length===4);speech.stop();await wait(()=>kills>0);assert.equal(speech.status().enabled,true);
+ assert.equal(spokenText('（轻声）晚安。'),'晚安。');
+ assert.equal(spokenText('**你好** [资料](https://example.com)\n```sh\nrm test\n```'),'你好 资料');
+ speech.close();speech=null;
+ const restored=createChatSpeech({root,store,request,spawnPlayer,autoTick:false});assert.equal(restored.status().enabled,true);restored.poll();await pause();assert.equal(played.length,4,'restart must not replay history');restored.close();
+ assert.equal(fs.readdirSync(path.join(root,'speech-cache')).length,0);
+ console.log('chat-speech: persisted toggle, new-only desktop delivery, QQ/seed exclusion, ordered playback, cancellation and cleanup passed');
+}finally{speech?.close();store.close();fs.rmSync(root,{recursive:true,force:true});}})().catch(e=>{console.error(e);process.exitCode=1;});

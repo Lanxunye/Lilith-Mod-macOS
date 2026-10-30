@@ -1,0 +1,15 @@
+'use strict';
+const assert=require('node:assert/strict'),{capabilitySnapshot,capabilityContext}=require('../src/host-capabilities');
+const config={local_context:{enabled:true,time_enabled:true},integrations:{comfy:{enabled:true,base_url:'http://127.0.0.1:8188',workflow:{x:{}},prompt_node_id:'x',autonomous_enabled:true,api_key:'SECRET_CREDENTIAL_CANARY'}}};
+const qq={enabled:true,paused:false,group_enabled:true,owner_qq:'111111',bot_qq:'222222',group_ids:['444444'],group_art_available:true,group_art_enabled:true,group_art_groups:[{group_id:'444444',used:2}],voice_enabled:true,group_voice_enabled:false,voice_mode:'gentle',stickers_enabled:true,private_stickers_enabled:true,group_stickers_enabled:true,owner_stickers_enabled:true,meme_library_count:149,owner_sticker_count:0};
+const clock={date:'2026-10-27',time:'00:25',timezone:'Asia/Shanghai'};
+const take=(channel,patch={})=>capabilitySnapshot({config,qq,speech:{enabled:true,status:'idle'},channel,session:channel==='qq_group'?'qq-group:222222:444444':'desktop-pet',clock,...patch});
+let s=take('qq');assert.equal(s.capabilities.voice.enabled,true);assert.equal(s.capabilities.voice.mode,'gentle');assert.equal(s.capabilities.drawing.available,false);assert.equal(s.capabilities.stickers.available,true);assert.equal(s.capabilities.time.current.time,'00:25');assert.equal(s.capabilities.weather.available,false);
+const rev=s.revision;qq.voice_enabled=false;s=take('qq');assert.notEqual(s.revision,rev);assert.equal(s.capabilities.voice.supported,true);assert.equal(s.capabilities.voice.enabled,false);
+qq.voice_enabled=true;s=take('qq_group');assert.equal(s.capabilities.voice.enabled,false);assert.equal(s.capabilities.drawing.available,true);assert.equal(s.capabilities.drawing.daily_remaining,8);assert.equal(s.capabilities.time.available,true);assert.ok(!JSON.stringify(s).includes('SECRET_CREDENTIAL_CANARY'));assert.ok(!JSON.stringify(s).includes('111111'));assert.ok(!JSON.stringify(s).includes('444444'));
+qq.group_art_groups[0].used=10;assert.equal(take('qq_group').capabilities.drawing.available,false);qq.group_art_groups[0].used=2;
+qq.paused=true;assert.equal(take('qq_group').capabilities.stickers.available,false);qq.paused=false;
+s=take('desktop');assert.equal(s.capabilities.drawing.available,true);assert.equal(s.capabilities.voice.enabled,true);assert.equal(take('desktop',{proactive:true}).capabilities.drawing.available,false);
+assert.equal(take('desktop',{config:{local_context:{enabled:false}}}).capabilities.time.available,false);
+const prompt=capabilityContext(s);assert.match(prompt,/本轮可信能力与交付快照/);assert.match(prompt,/禁止工具调用不妨碍/);assert.match(prompt,/confirmed=true/);assert.match(prompt,/不写入主人长期记忆/);
+console.log('host-capabilities: live flags/revisions, channel scopes, quotas, time, weather pause, no credential/identity leakage and receipt semantics passed');

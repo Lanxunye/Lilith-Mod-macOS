@@ -40,6 +40,7 @@ import sys,shutil
 from pathlib import Path
 root,plugins=map(Path,sys.argv[1:])
 for name in ['companion','character','locales']:
-    shutil.copytree(root/name,plugins/name,dirs_exist_ok=True,ignore=shutil.ignore_patterns('node_modules','.test-*'))
+    shutil.copytree(root/name,plugins/name,dirs_exist_ok=True,ignore=shutil.ignore_patterns(
+        'node_modules','.test-*','private-source','translation-cache','translation-work','candidates.local.json'))
 shutil.copytree(root/'plugin/assets',plugins/'assets',dirs_exist_ok=True)
 PY

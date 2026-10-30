@@ -1,3 +1,5 @@
+> Current macOS release: **0.3.4-macos.dev15**. For the current setup package and complete instructions, see [macOS deployment guide (简体中文)](docs/deployment-macos.md). Older version statements below are historical.
+
 > macOS port: see [README](README.md) and [macOS preview guide](docs/macos-preview.md). The remaining text is the original Windows upstream documentation.
 
 # The NOexistenceN of Lilith Mod

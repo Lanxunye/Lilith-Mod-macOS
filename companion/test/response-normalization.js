@@ -60,3 +60,8 @@ assert.deepStrictEqual(
   { text: 'emotion=happy 代表一种情绪。' });
 
 console.log('Response normalization tests passed.');
+const multi=normalizeResponse({text:'不得重复显示的摘要',messages:[{text:'回来啦。',emotion:'happy'},{text:'（轻轻笑了笑）还知道找我呀。',emotion:'shy'}]},'',100);
+assert.deepEqual(multi.messages.map(p=>p.text),['回来啦。','还知道找我呀。']);assert.equal(multi.text,'回来啦。\n还知道找我呀。');
+assert.equal(multi.messages[1].emotion,'shy');
+assert.ok(Array.from(normalizeResponse({messages:[{text:'很长的一条'.repeat(30)},{text:'剩下的话'}]},'',60).text).length<=60,'total budget covers all bubbles');
+assert.equal(normalizeResponse({text:'只有一句。',messages:[null,{}, {text:''}]},'',100).text,'只有一句。');

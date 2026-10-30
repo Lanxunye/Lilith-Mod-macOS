@@ -62,7 +62,7 @@ def main():
     version = subprocess.check_output([str(node), '--version'], text=True).strip()
     if not version.startswith('v24.'): raise SystemExit('需要 Node 24。')
     subprocess.run(['/usr/bin/arch', '-x86_64', '/usr/bin/true'], check=True)
-    for p in [ROOT / 'scripts/launch-installed-macos.cjs', ROOT / 'scripts/uninstall-installed-macos.cjs', ROOT / 'scripts/companion-service.cjs']:
+    for p in [ROOT / 'scripts/launch-installed-macos.cjs', ROOT / 'scripts/uninstall-installed-macos.cjs', ROOT / 'scripts/companion-service.cjs', ROOT / 'scripts/startup-services.cjs']:
         subprocess.run([str(node), '--check', str(p)], check=True)
     before = app_manifest(app)
     stamp = datetime.now().astimezone().strftime('%Y%m%d-%H%M%S')
@@ -114,8 +114,11 @@ def main():
         (support / 'runtime/node/bin').mkdir(parents=True)
         shutil.copy2(node, support / 'runtime/node/bin/node')
         shutil.copy2(nodesource / 'LICENSE', support / 'runtime/node/LICENSE')
-        for name in ['launch-installed-macos.cjs', 'uninstall-installed-macos.cjs', 'companion-service.cjs']:
+        for name in ['launch-installed-macos.cjs', 'uninstall-installed-macos.cjs', 'companion-service.cjs', 'startup-services.cjs']:
             shutil.copy2(ROOT / 'scripts' / name, support / name)
+        helper = ROOT / '.local-state/LilithLocation.app'
+        if helper.is_dir():
+            shutil.copytree(helper, support / 'helpers/LilithLocation.app')
         for name in ['LICENSE', 'ASSET-NOTICE.md', 'THIRD-PARTY-NOTICES.md', 'dependencies-macos.json']:
             shutil.copy2(payload / name, support / name)
         shutil.copy2(ROOT / 'loader/LICENSE.upstream-LGPL-2.1.txt', support / 'LICENSE.BepInEx-LGPL-2.1.txt')
@@ -127,6 +130,9 @@ def main():
             (stage / name).chmod(0o755)
         (stage / '莉莉丝常驻服务.command').write_text('#!/bin/bash\nset -euo pipefail\n'
             'HERE="$(cd "$(dirname "$0")" && pwd)"\n'
+            'if [ "${1:-start}" = "start" ]; then\n'
+            '  exec "$HERE/LilithMod/runtime/node/bin/node" "$HERE/LilithMod/startup-services.cjs"\n'
+            'fi\n'
             'exec "$HERE/LilithMod/runtime/node/bin/node" "$HERE/LilithMod/companion-service.cjs" "${1:-start}"\n')
         (stage / '莉莉丝常驻服务.command').chmod(0o755)
         manifest = {'version': metadata['version'], 'game_dir': str(game), 'backup': str(backup),
@@ -154,7 +160,7 @@ def main():
 
 正式 Mod 数据位于 `~/Library/Application Support/LilithAI/`，迁移了现有密钥配置、记忆、聊天和绘图作品。密钥不会写入安装报告。原游戏使用自己的 `com.Nino.Lilith` 存档；不使用开发副本的游戏进度。DSH 测试任务保留在开发目录和备份，正式版任务队列从空开始。
 
-DSH 与 ComfyUI 仍调用原来安装的服务；绘图需另外开启已有的 ComfyUI。无需重新填写 Mod Key；桌面 DSH Key 仍不自动同步。旧设置页的运行令牌已失效，请从游戏里重新打开。
+启动入口会检查聊天后台、DSH、QQ 协议端与 ComfyUI。已有服务直接复用；配置了本机 `startup-services.json` 的 QQ 与 ComfyUI 会自动启动，未配置的服务会显示提示。不会安装依赖、改写登录凭据或解除暂停。QQ 登录过期时仍需本人扫码；退出游戏不会停止已启动的常驻服务。旧设置页的运行令牌已失效，请从游戏里重新打开。
 
 ## 停用与备份
 

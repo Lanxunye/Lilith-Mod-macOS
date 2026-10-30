@@ -1,0 +1,7 @@
+{
+  "adaptation": "lilith-compat.1",
+  "upstream_repository": "https://github.com/kingcharleslzy-ai/dsh-purge",
+  "upstream_commit": "5ba6fadac493b07669ab7379c3e6bda618f286a0",
+  "upstream_version": "1.6.55",
+  "character_sha256": "1b476084bf1a4f00dad74f8bb1a46c9110e5c94abf3d71418ba61d54ccc21d26"
+}

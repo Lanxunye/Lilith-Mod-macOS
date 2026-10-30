@@ -1,0 +1,22 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),os=require('node:os');
+const {systemLocation,normalizeLocation}=require('../src/system-location'),{weatherRead}=require('../src/weather');
+const now=Date.parse('2026-10-29T12:00:00Z'),location={status:'available',latitude:35.123456,longitude:110.987654,observed_at:now,accuracy_m:100,city:'测试城市',country_code:'CN'};
+const fixture=()=>({timezone:'Asia/Shanghai',latitude:35.123456,longitude:110.987654,current:{time:now/1000-300,temperature_2m:18.5,apparent_temperature:17,relative_humidity_2m:70,wind_speed_10m:3,precipitation:0,weather_code:2,is_day:1},current_units:{time:'unixtime',temperature_2m:'°C',apparent_temperature:'°C',relative_humidity_2m:'%',wind_speed_10m:'m/s',precipitation:'mm'},daily:{time:[Date.parse('2026-10-29T00:00:00+08:00')/1000],temperature_2m_max:[22],temperature_2m_min:[12],precipitation_probability_max:[30]},daily_units:{temperature_2m_max:'°C',temperature_2m_min:'°C',precipitation_probability_max:'%'}});
+(async()=>{
+ const normalized=normalizeLocation(location,now);assert.equal(normalized.latitude,35.1);assert.equal(normalized.longitude,111);assert.equal(normalized.accuracy_m,10000);assert.equal(normalizeLocation({...location,observed_at:now-700000},now).status,'no_fresh_fix');assert.equal(normalizeLocation({...location,latitude:null},now).status,'no_fresh_fix');
+ const result=await weatherRead(normalized,{now:()=>now,request:async(url,options)=>{const u=new URL(url);assert.equal(u.origin,'https://api.open-meteo.com');assert.equal(u.searchParams.get('latitude'),'35.1');assert.equal(u.searchParams.get('longitude'),'111');assert.equal(options.redirect,'error');assert.equal(u.searchParams.get('timeformat'),'unixtime');return new Response(JSON.stringify(fixture()));}});
+ assert.equal(result.temperature_c,18.5);assert.equal(result.condition,'局部多云');assert.equal(result.today.high_c,22);assert.equal(result.data_type,'weather_model_estimate');assert.equal(result.place,'测试城市');assert(!JSON.stringify(result).includes('latitude'));assert(!JSON.stringify(result).includes('longitude'));assert(!JSON.stringify(result).includes('35.123456'));
+ const reject=async(body,code)=>assert.rejects(weatherRead(normalized,{now:()=>now,request:async()=>new Response(JSON.stringify(body))}),e=>e.code===code);
+ let bad=fixture();bad.current.time=now/1000-7200;await reject(bad,'weather_invalid_or_stale_data');bad=fixture();bad.current_units.temperature_2m='°F';await reject(bad,'weather_invalid_or_stale_data');bad=fixture();bad.current.temperature_2m=null;await reject(bad,'weather_invalid_or_stale_data');
+ await assert.rejects(weatherRead(normalized,{request:async()=>{throw Error('network');}}),e=>e.code==='weather_service_unreachable');await assert.rejects(weatherRead(normalized,{request:async()=>new Response('x'.repeat(140000))}),e=>e.code==='weather_response_too_large');
+ if(process.platform==='darwin'){
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'lilith-location-test-')),helper=path.join(root,'Helper.app');fs.mkdirSync(path.join(helper,'Contents/MacOS'),{recursive:true});fs.writeFileSync(path.join(helper,'Contents/MacOS/LilithLocation'),'fixture');
+  try{let asked=false;const run=async(command,args)=>{assert.equal(command,'/usr/bin/open');asked=args.includes('--request-permission');const id=args[args.indexOf('--request-id')+1];fs.writeFileSync(path.join(root,'location/requests',id+'.json'),JSON.stringify({...location,request_id:id}));};
+   const p=await systemLocation({root,helper,run,now:()=>now});assert.equal(p.latitude,35.1);assert.equal(asked,false);assert.equal(fs.readdirSync(path.join(root,'location/requests')).length,0);
+   await systemLocation({root,helper,run,now:()=>now,requestPermission:true});assert.equal(asked,true);
+   const denied=await systemLocation({root,helper,now:()=>now,run:async(cmd,args)=>{const id=args[args.indexOf('--request-id')+1];fs.writeFileSync(path.join(root,'location/requests',id+'.json'),JSON.stringify({request_id:id,status:'permission_denied'}));}});assert.deepEqual(denied,{status:'permission_denied'});
+  }finally{fs.rmSync(root,{recursive:true,force:true});}
+ }
+ console.log('weather-source: coarse system location, explicit-only authorization, temporary result cleanup, bounded fixed-origin query, units/timestamps validation, model provenance and coordinate-free output passed.');
+})().catch(e=>{console.error(e);process.exitCode=1;});

@@ -1,0 +1,35 @@
+{
+  "name": "dsh-fish-memory",
+  "version": "1.2.6-lilith.3",
+  "description": "鱼的记忆：莉莉丝原生 SDK 与有来源的聊天记忆适配",
+  "type": "module",
+  "main": "index.mjs",
+  "exports": {
+    ".": "./index.mjs"
+  },
+  "files": [
+    "index.mjs",
+    "store.cjs",
+    "upstream",
+    "cordis.patch.yml",
+    "LICENSE",
+    "UPSTREAM.json",
+    "README.md"
+  ],
+  "license": "MIT",
+  "author": "Yuuyuko-uu",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "lilithAdaptation": {
+    "adaptation": "lilith-memory-sdk.1",
+    "upstreamVersion": "1.2.6",
+    "proactiveOrigin": 1,
+    "messageParts": 1
+  },
+  "scripts": {
+    "test": "node --test test.mjs"
+  }
+}

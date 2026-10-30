@@ -1,0 +1,17 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {wantsVideoLink,isVideoUrl,stripVideoLinks,applyVideoLinkPolicy}=require('../src/bili-links');
+const url='https://www.bilibili.com/video/BV1234567890';
+for(const text of ['让我看看原视频','我想看一下原视频','把链接发我','给我视频链接','原视频链接呢','把原视频发过来','链接呢？'])assert.equal(wantsVideoLink(text),true,text);
+for(const text of ['最近读了什么视频？','这条视频讲了什么','不要发链接','先别给我原视频链接','她说“让我看看原视频”是什么意思','为什么你总是发链接？'])assert.equal(wantsVideoLink(text),false,text);
+assert.equal(isVideoUrl(url+'?p=1'),true);assert.equal(isVideoUrl('https://b23.tv/ABC123'),true);assert.equal(isVideoUrl('https://www.bilibili.com.evil.example/video/BV1234567890'),false);assert.equal(isVideoUrl('https://example.com'),false);
+assert.equal(stripVideoLinks('光影很有意思。\n原视频：'+url),'光影很有意思。');assert.equal(stripVideoLinks('[光影课]('+url+')'),'光影课');assert.equal(stripVideoLinks('见 <'+url+'>'),'见');assert.equal(stripVideoLinks('文档 https://example.com/guide'),'文档 https://example.com/guide');
+const untouched={text:'一段话。还有一段话。',speech:{style:'soft'},memory_updates:[]};assert.equal(applyVideoLinkPolicy(untouched),untouched,'unrelated plain output retains fallback segmentation');
+const raw={messages:[{text:'光影很有意思。',speech:{style:'soft'}},{text:'原视频：'+url}],citations:[{url},{url:'https://example.com/guide'}],memory_updates:[]};
+const hidden=applyVideoLinkPolicy(raw);assert.equal(hidden.text,'光影很有意思。');assert.equal(hidden.messages.length,1);assert.equal(hidden.messages[0].speech.style,'soft');assert.deepEqual(hidden.citations,[{url:'https://example.com/guide'}]);
+const shown=applyVideoLinkPolicy({messages:[{text:'给你。'+url},{text:'多余猜测地址 https://b23.tv/UNKNOWN'}]}, {requested:true,links:[{url}]});assert.ok(shown.text.includes(url));assert.equal(shown.text.split(url).length-1,1);assert.ok(!shown.text.includes('b23.tv'));
+const omitted=applyVideoLinkPolicy({text:'给你看看。'},{requested:true,links:[{url}]});assert.ok(omitted.text.endsWith(url),'explicit request receives canonical saved URL even if model omits it');
+const long=applyVideoLinkPolicy({text:'长'.repeat(400)},{requested:true,links:[{url}],maxChars:400});assert.ok([...long.text].length<=400);assert.ok(long.text.endsWith(url),'reserved budget preserves complete URL');
+assert.equal(applyVideoLinkPolicy({text:url},{allowEmpty:true}).text,'','proactive URL-only output can stay silent');
+assert.ok(!applyVideoLinkPolicy({text:'内容。'+url,messages:[null],citations:'invalid'}).text.includes('bilibili.com'),'malformed optional fields retain text fallback and filtering');
+console.log('bili-links: explicit/current-turn requests, negatives/quotes, long/short/Markdown video links, unrelated citations, authored parts/speech, complete canonical URL budget and silent proactive output passed');

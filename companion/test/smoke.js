@@ -68,7 +68,7 @@ function request(port, method, target, token, payload) {
 }
 
 async function main() {
-  const app = createApp();
+  const app = createApp({chatEngine:'provider-test'});
   assert.deepStrictEqual(app.config.local_context, {
     enabled: true,
     time_enabled: true,

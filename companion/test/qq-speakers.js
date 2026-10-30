@@ -4,7 +4,7 @@ const {ConversationStore}=require('../src/conversation-store');const {createQQBr
 (async()=>{
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'lilith-speakers-'));const store=new ConversationStore(root);
  let bridge,clock=new Date('2026-10-22T10:00:00Z'),received=[],lookups=[],quote,fail=false,id=0;
- bridge=createQQBridge({root,store,autoTick:false,now:()=>clock,getPlayerName:()=> 'private owner',request:async(url,opts)=>{
+ bridge=createQQBridge({root,store,autoTick:false,decide:async()=>({action:'reply'}),now:()=>clock,getPlayerName:()=> 'private owner',request:async(url,opts)=>{
    assert.ok(url.endsWith('/get_msg'),'no attachments or other APIs may be fetched');lookups.push(JSON.parse(opts.body));if(fail)throw Error('message retracted');return {ok:true,json:async()=>({status:'ok',retcode:0,data:quote})};
  },chat:async(session,body,channel)=>{received.push({session,body,data:JSON.parse(body.message.slice(body.message.indexOf('\n')+1)),channel});}});
  bridge.configure({enabled:true,paused:false,owner_qq:'111111',bot_qq:'222222',api_token:'fixture',event_secret:'fixture',api_url:'http://127.0.0.1:6190',group_enabled:true,group_ids:['444444']});

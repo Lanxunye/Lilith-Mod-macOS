@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>CFBundleIdentifier</key><string>com.lilith.companion.location</string>
+<key>CFBundleName</key><string>莉莉丝天气定位</string>
+<key>CFBundleExecutable</key><string>LilithLocation</string>
+<key>CFBundleVersion</key><string>2</string>
+<key>CFBundleShortVersionString</key><string>1.1</string>
+<key>CFBundlePackageType</key><string>APPL</string>
+<key>LSUIElement</key><true/>
+<key>NSLocationUsageDescription</key><string>用于莉莉丝的当地天气。位置取整为约10公里范围后查询天气服务；不记录轨迹，不将坐标写入聊天或记忆。</string>
+<key>NSLocationWhenInUseUsageDescription</key><string>用于查询当地天气，仅保留约10公里范围的位置与城市。近似坐标会发送给Open-Meteo天气服务。</string>
+</dict></plist>

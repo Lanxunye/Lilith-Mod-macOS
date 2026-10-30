@@ -120,7 +120,7 @@ async function main() {
   process.env.LILITH_AI_DATA_DIR = dataRoot;
   process.env.LILITH_AI_CONFIG = configPath;
   const { createApp } = require('../src/server');
-  const app = createApp();
+  const app = createApp({chatEngine:'provider-test'});
   await listen(app.server);
   try {
     app.mediaMonitor.state = {
@@ -173,7 +173,11 @@ async function main() {
       });
     assert.strictEqual(result.status, 200);
     assert.strictEqual(result.body.status, 'ok');
-    assert.strictEqual(result.body.text, 'テストだね。ちゃんと届いているよ。');
+    assert.strictEqual(result.body.text, 'テストだね。');
+    assert.strictEqual(result.body.reply_batch.source, 'local_fallback');
+    app.store.db.prepare("UPDATE reply_batches SET next_at=0 WHERE session=? AND state='pending'").run('language-retry');
+    await app.flushReplyParts();
+    assert.strictEqual(app.store.recent('language-retry').filter(r=>r.role==='assistant').map(r=>r.content).join(''), 'テストだね。ちゃんと届いているよ。');
     assert.strictEqual(captured.length, retryStart + 2);
     assert.deepStrictEqual(captured[retryStart].tools, [{ type: 'web_search' }]);
     assert.strictEqual(Object.hasOwn(captured[retryStart + 1], 'tools'), false);

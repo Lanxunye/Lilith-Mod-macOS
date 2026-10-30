@@ -1,0 +1,11 @@
+{
+  "name": "dsh-bili-subagent",
+  "version": "0.8.7-lilith.1",
+  "type": "module",
+  "main": "index.mjs",
+  "exports": {".": "./index.mjs"},
+  "files": ["index.mjs", "read_worker.py", "requirements.txt", "requirements.lock.txt", "cordis.patch.yml", "LICENSE", "UPSTREAM.json", "README.md"],
+  "license": "MIT",
+  "dsh": {"bundle": {"patch": "./cordis.patch.yml"}},
+  "lilithAdaptation": {"adaptation": "lilith-bili-readonly-sdk.1", "upstreamVersion": "0.8.7", "hostOnly": true}
+}

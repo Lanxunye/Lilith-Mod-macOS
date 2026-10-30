@@ -26,12 +26,14 @@ jobs:
           dotnet-version: '8.0.x'
       - name: Install locked dependency-free Companion
         run: npm ci --ignore-scripts --prefix companion
+      - name: Setup installer tests
+        run: node tests/installer-macos.cjs
       - name: Companion tests
         run: npm test --prefix companion
       - name: Managed portable tests
         shell: bash
         run: |
-          for project in tests/chat-view-model/*.csproj tests/cross-screen-ground/*.csproj tests/dialogue-formatter/*.csproj tests/player-line-options/*.csproj tests/runtime-resources/*.csproj; do
+          for project in tests/chat-view-model/*.csproj tests/cross-screen-ground/*.csproj tests/dialogue-formatter/*.csproj tests/player-line-options/*.csproj tests/runtime-resources/*.csproj tests/mac-music-player/*.csproj tests/shared-chat-bridge/*.csproj; do
             dotnet run --project "$project" -c Release
           done
 # Game/interop-dependent plugin build is local only. No release or upload job.

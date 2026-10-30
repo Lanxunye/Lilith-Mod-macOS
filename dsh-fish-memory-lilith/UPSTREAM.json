@@ -1,0 +1,19 @@
+{
+  "repository": "Yuuyuko-uu/dsh-fish-memory",
+  "version": "1.2.6",
+  "commit": "70dc9abdeb920bec1c5bad8b4a3f546960063454",
+  "license": "MIT",
+  "files": {
+    "lib/hostdeps.mjs": "b611a920aed693fdf8f07be61c02e4a69b4360eb",
+    "lib/selfupdate.mjs": "83b72a97b914726fe2dff50ba03f5ce5e204dbec",
+    "lib/生成档案.js": "37b0d86deaa31840ff07579034a20f7b359dcb2e",
+    "lib/词典.txt": "ffb6f918724458c746ee4eb95d7b529b17e24b22",
+    "lib/词频.txt": "fb4da18b4b2a43ec1eb06370fe306a3b544499b9",
+    "lib/词典-来源.txt": "07811f563b419b8984a5cc5a6796bdcb903e3126",
+    "LICENSE": "451305d1c38c451118150dd5ebb86e0a03c5e37f",
+    "cordis.patch.yml": "60d0ec576f33fb9164352e82c9de2765abaea653",
+    "lib/index.js": "000bd9367f86a1d4f859441b196145fde8fcea83",
+    "package.json": "fc1782f0af9aff123939e9166772eb3fba8c8867",
+    "README.md": "3b469979b5af573055f116ac12df31efeb9dd4ea"
+  }
+}

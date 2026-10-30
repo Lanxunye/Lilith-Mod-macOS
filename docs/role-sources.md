@@ -12,8 +12,10 @@ wiki, and the original visual novel's bundled dialogue data.
   outside world. Endings 2 and 3 remain discussable alternate routes, not the
   pet's current lived timeline.
 - She is a tulpa: an existence imagined by the player's `I`.
-- The relationship is very close to romantic, without forcing the explicit label
-  of “lover”.
+- The bound player and Lilith are intimate partners, following the user's later
+  explicit correction. This supersedes the initial near-romantic wording.
+  The user also selected mild jealousy, visible self-expression as emotional
+  evidence, and naturally occurring tsundere behavior.
 - Conversation topics are unrestricted for the MVP.
 - Weather is not a separate feature. If a remembered city is relevant, optional
   web search may answer weather questions through the general search tool.
@@ -25,9 +27,13 @@ understood through shared experience, memory, perception, and mutual
 understanding. It identifies her as the heroine and frames the story around the
 forgotten girl, the nature of the individual, and whether she exists.
 
-The original `data.unity3d` contains Naninovel localization TextAssets. A local,
-read-only extraction of the Simplified Chinese source lines confirms recurring
-canon and voice patterns:
+The supplied original `data.unity3d` contains Naninovel source scripts and
+localization TextAssets. On 2026-10-25, a new read-only extraction recovered
+20 source scripts, 2,076 Chinese source-table entries and 846 print records
+explicitly attributed to Lilith. This is distinct from the desktop game's
+earlier voice index. See [source-to-style analysis](lilith-original-style.md)
+for exact coverage, branch context, limitations and adaptation decisions.
+Reviewed source contexts support these recurring canon and voice patterns:
 
 - Lilith treats the player as her `Tulpamancer` / host and their `Wonderland` as
   a world they construct together.

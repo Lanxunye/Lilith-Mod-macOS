@@ -1,0 +1,20 @@
+'use strict';
+const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),assert=require('node:assert/strict');
+const root=fs.mkdtempSync(path.join(os.tmpdir(),'lilith-bili-bridge-'));
+(async()=>{let bridge;try{
+ const {validate,createReader,install}=await import('../../dsh-bili-subagent-lilith/index.mjs');
+ for(const operation of ['reply','send_message','send_dynamic','triple','setup','config'])assert.throws(()=>validate(operation,{}),/bili_operation_denied/);
+ assert.throws(()=>validate('video',{bvid:'https://localhost/'}),/bili_invalid_bvid/);assert.throws(()=>validate('search',{query:'我的密码 sk-secret'}),/bili_private_query_denied/);
+ let executed=0;const reader=createReader({directory:path.join(root,'state'),python:process.execPath,execute:async(op)=>{executed++;return {logged_in:true};}});
+ let disposed;const file=path.join(root,'endpoint.json'),token='a'.repeat(64);
+ bridge=await install({provide:(name,value)=>{assert.equal(name,'lilithBiliReady');assert.equal(value.readOnly,true);},effect:fn=>disposed=fn()},{home:root,file,token,reader});
+ const {port,fingerprint}=JSON.parse(fs.readFileSync(file));assert.ok(!fingerprint.includes(token));const endpoint='http://127.0.0.1:'+port+'/read';
+ assert.equal((await fetch(endpoint,{method:'POST',body:'{}'})).status,403);
+ const call=async(operation,payload={})=>{const r=await fetch(endpoint,{method:'POST',headers:{Authorization:'Bearer '+token},body:JSON.stringify({operation,payload})});return {status:r.status,value:await r.json()};};
+ assert.equal((await call('send_dynamic',{force:true})).status,400);assert.equal(executed,0);
+ assert.equal((await call('check')).value.value.logged_in,true);assert.equal(executed,1);assert.equal(reader.status().login_state,'verified');
+ assert.ok(!JSON.stringify(await call('status')).includes('sessdata'));await bridge.dispose();bridge=null;assert.equal(fs.existsSync(file),false);
+ const uncertain=createReader({directory:path.join(root,'network-error'),python:process.execPath,execute:async()=>({error:'bili_login_check_failed'})});await assert.rejects(uncertain.call('check'),/bili_login_check_failed/);assert.equal(uncertain.status().login_state,'unverified','network/TLS failures must not become expired-login claims');
+ const expired=createReader({directory:path.join(root,'expired'),python:process.execPath,execute:async()=>({logged_in:false})});assert.equal((await expired.call('check')).logged_in,false);assert.equal(expired.status().login_state,'expired');
+ console.log('bili-bridge: authenticated loopback, fail-closed operation allowlist, force cannot enable account writes, sensitive query rejection, readiness and credential-free status passed');
+}finally{bridge?.dispose();fs.rmSync(root,{recursive:true,force:true});}})().catch(e=>{console.error(e);process.exitCode=1;});

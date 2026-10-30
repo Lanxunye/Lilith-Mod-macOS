@@ -1,0 +1,21 @@
+'use strict';
+const assert=require('node:assert/strict'),{EventEmitter}=require('node:events'),{Readable}=require('node:stream');
+const {publicGet,publicAddress,rssItems}=require('../src/qq-public-web');
+(async()=>{
+ for(const ip of ['0.0.0.0','10.2.3.4','100.64.0.1','127.0.0.1','169.254.169.254','172.16.0.1','192.168.1.1','198.18.0.1','224.0.0.1','::1','::ffff:8.8.8.8','2001:db8::1','2002:7f00:1::1'])assert.equal(publicAddress(ip),false,ip);
+ assert.equal(publicAddress('8.8.8.8'),true);assert.equal(publicAddress('2606:4700:4700::1111'),true);
+ let requests=[];const resolve=async h=>[{address:h==='private.invalid'?'127.0.0.1':'8.8.8.8',family:4}];
+ const send=(url,options,callback)=>{requests.push({url:url.href,options});const req=new EventEmitter();req.setTimeout=()=>{};req.destroy=()=>req.emit('error',Error('timeout'));
+  queueMicrotask(()=>{const redirect=url.pathname==='/redirect'||url.pathname==='/bad-redirect',body=url.pathname==='/large'?'x'.repeat(101):'public evidence';const res=Readable.from([Buffer.from(body)]);res.statusCode=redirect?302:200;res.headers=redirect?{location:url.pathname==='/bad-redirect'?'https://private.invalid/':'https://other.invalid/final'}:{'content-type':'text/plain'};callback(res);res.on('close',()=>req.emit('close'));});return req;};
+ const opts={resolve,send};
+ for(const url of ['http://public.invalid','https://user:secret@public.invalid','https://127.0.0.1','https://private.invalid','https://public.invalid:444/'])await assert.rejects(()=>publicGet(url,opts));assert.equal(requests.length,0);
+ await assert.rejects(()=>publicGet('https://public.invalid/',{...opts,allowHost:()=>false}),/host_denied/);
+ const ok=await publicGet('https://public.invalid/',opts);assert.equal(ok.bytes.toString(),'public evidence');
+ const lookup=requests[0].options.lookup;await new Promise((r,j)=>lookup('public.invalid',{},(e,a,f)=>{try{assert.equal(a,'8.8.8.8');assert.equal(f,4);r();}catch(e){j(e);}}));
+ await assert.rejects(()=>publicGet('https://public.invalid/large',{...opts,limit:100}),/too_large/);
+ const partial=await publicGet('https://public.invalid/large',{...opts,limit:100,truncate:true});assert.equal(partial.bytes.length,100);assert.equal(partial.truncated,true,'article previews stay bounded while preserving usable text');
+ await assert.rejects(()=>publicGet('https://public.invalid/bad-redirect',opts),/private_network_denied/);
+ await publicGet('https://public.invalid/redirect',{...opts,headers:{'X-Subscription-Token':'private-fixture'}});assert.equal(requests.at(-1).options.headers['X-Subscription-Token'],undefined,'never forward a search credential across redirects');
+ assert.deepEqual(rssItems('<rss><item><title><![CDATA[Public &amp; fact]]></title><link>https://example.com/a</link><description>excerpt</description></item></rss>'),[{title:'Public & fact',url:'https://example.com/a',snippet:'excerpt'}]);
+ console.log('qq-public-web: public DNS pinning, private/IP-tunnel denial, HTTPS enforcement, per-redirect validation, credential stripping, body bounds and RSS parsing passed.');
+})().catch(e=>{console.error(e);process.exitCode=1;});

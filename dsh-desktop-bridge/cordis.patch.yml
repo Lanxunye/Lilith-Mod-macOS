@@ -1,0 +1,4 @@
+- insert:
+    - id: lilith-desktop-bridge
+      name: lilith-dsh-desktop-bridge
+      inject: [webServer]

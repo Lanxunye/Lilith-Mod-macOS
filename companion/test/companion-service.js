@@ -3,6 +3,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('nod
 const root=fs.mkdtempSync(path.join(os.tmpdir(),'lilith-service-'));
 const script=path.resolve(__dirname,'../../scripts/companion-service.cjs');
 const env={...process.env,LILITH_AI_DATA_DIR:root,LILITH_AI_CONFIG:path.join(root,'config.json'),LILITH_GAME_PID:'2147483647'};
+async function waitExit(pid){for(let n=0;n<200;n++){try{process.kill(pid,0);}catch(e){if(e.code==='ESRCH')return;throw e;}await new Promise(r=>setTimeout(r,25));}throw Error('owned_test_service_stop_timeout');}
 function command(action){return new Promise((resolve,reject)=>execFile(process.execPath,[script,action],{env},(e,stdout,stderr)=>e?reject(Error(stderr||e.message)):resolve(stdout)));}
 (async()=>{
  const socket=net.createServer();await new Promise(r=>socket.listen(0,'127.0.0.1',r));const port=socket.address().port;await new Promise(r=>socket.close(r));
@@ -19,7 +20,8 @@ function command(action){return new Promise((resolve,reject)=>execFile(process.e
   assert.match(await command('status'),/standalone/);
   await command('stop');for(let i=0;i<40&&fs.existsSync(path.join(root,'runtime.json'));i++)await new Promise(r=>setTimeout(r,50));
   assert.equal(fs.existsSync(path.join(root,'runtime.json')),false);
+  await waitExit(pid); // The lock is released by the process exit hook, after runtime removal.
   assert.equal(fs.existsSync(path.join(root,'companion.lock')),false);
   console.log('companion-service: detached lifecycle survives absent game, authenticated reuse, single process and owned shutdown passed.');
- }finally{if(pid)try{process.kill(pid,'SIGTERM');}catch{}fs.rmSync(root,{recursive:true,force:true});}
+ }finally{if(pid){try{process.kill(pid,'SIGTERM');}catch{}await waitExit(pid);}fs.rmSync(root,{recursive:true,force:true,maxRetries:5,retryDelay:25});}
 })().catch(e=>{console.error(e);process.exitCode=1;});

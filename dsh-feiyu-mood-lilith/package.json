@@ -1,0 +1,40 @@
+{
+  "name": "dsh-feiyu-mood",
+  "version": "0.7.0-lilith.6",
+  "description": "鱼的心情 0.7.0：莉莉丝原生 DSH SDK 适配",
+  "type": "module",
+  "main": "index.mjs",
+  "exports": {
+    ".": "./index.mjs"
+  },
+  "files": [
+    "index.mjs",
+    "style.cjs",
+    "lilith-style.json",
+    "upstream",
+    "cordis.patch.yml",
+    "LICENSE",
+    "UPSTREAM.json",
+    "README.md",
+    "pet-affection-view.cjs",
+    "mood-background.cjs"
+  ],
+  "license": "MIT",
+  "author": "Yuuyuko-uu",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "lilithAdaptation": {
+    "adaptation": "lilith-sdk.1",
+    "upstreamVersion": "0.7.0",
+    "proactiveOrigin": 1,
+    "messageParts": 1,
+    "petInteractions": 1,
+    "backgroundEachTurn": 1
+  },
+  "scripts": {
+    "test": "node --test test.mjs"
+  }
+}

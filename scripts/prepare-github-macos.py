@@ -13,15 +13,15 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 SKIP = {'bin', 'obj', 'node_modules', '__pycache__', '.git', '.DS_Store', 'private-source',
         'translation-cache', 'translation-work', 'evidence', 'vendor'}
-DIRECTORIES = ['companion', 'character', 'locales', 'protocol', 'plugin/src', 'plugin/assets',
+DIRECTORIES = ['companion', 'character', 'dsh-feiyu-mood-lilith', 'dsh-fish-memory-lilith', 'dsh-speak-up-lilith', 'locales', 'protocol', 'plugin/src', 'plugin/assets',
                'native', 'tests', 'loader', '.github', 'docs']
 FILES = ['LICENSE','ASSET-NOTICE.md','THIRD-PARTY-NOTICES.md','README.md','README.en.md',
          'README.ja.md','README.zh-TW.md','DSH.md','DSH接入设计-20261022.md','COMFYUI.md',
          'INTEGRATIONS.md','QQBOT.md','dependencies-macos.json','plugin/LilithMod.csproj','.gitignore','.gitattributes']
 SCRIPTS = ['build-macos.sh','test-macos.sh','build-loader-macos.sh','prepare-github-macos.py',
-           'build-lore-candidates.js','launch-macos.py','import-comfy-workflow.py',
+           'import-meme-library.cjs','build-lore-candidates.js','build-lilith-style.cjs','build-dsh-memory.cjs','extract-lilith-novel.py','launch-macos.py','import-comfy-workflow.py',
            'test-native-macos.sh','install-steam-macos.py','launch-installed-macos.cjs',
-           'uninstall-installed-macos.cjs','companion-service.cjs','open-console.cjs']
+           'uninstall-installed-macos.cjs','companion-service.cjs','open-console.cjs','startup-services.cjs','build-location-helper.sh']
 VERSION = json.loads((ROOT/'macos-release.json').read_text())['version']
 if not re.fullmatch(r'\d+\.\d+\.\d+-macos\.dev\d+(?:\.\d+)?', VERSION):
     raise ValueError('Unexpected macOS preview version')
@@ -49,7 +49,7 @@ def private_values(paths):
     def visit(item):
         if isinstance(item,dict):
             for key,value in item.items():
-                if key in {'api_key','token','api_token','event_secret'} and isinstance(value,str) and len(value)>=12:values.add(value.encode())
+                if key in {'api_key','token','api_token','event_secret','vision_api_key','search_api_key','apiKey','secret','password','owner_qq','bot_qq'} and isinstance(value,str) and len(value)>=5:values.add(value.encode())
                 visit(value)
         elif isinstance(item,list):
             for value in item:visit(value)
@@ -63,9 +63,14 @@ def audit(tree, secrets):
         rel=p.relative_to(tree).as_posix(); raw=p.read_bytes();data=raw+raw.replace(b'\x00',b'')
         for secret in secrets:
             if secret in data:findings.append({'path':rel,'rule':'private_credential_exact_match'})
-        if re.search(rb'/Users/[A-Za-z0-9_.-]+/', data):
+        homes=re.findall(rb'/Users/[A-Za-z0-9_.-]+/',data)
+        # Explicit synthetic Mac-path fixtures exercise privacy filtering; real home paths still block.
+        synthetic_home=b'/Users/'+b'private/'
+        if any(h!=synthetic_home or not rel.startswith('companion/test/') for h in homes):
             findings.append({'path':rel,'rule':'personal_home_path'})
-        if re.search(rb'\bsk-[A-Za-z0-9_-]{20,}\b',data):
+        keys=re.findall(rb'\bsk-[A-Za-z0-9_-]{20,}\b',data)
+        synthetic_key=b'sk-'+b'fixture-never-return'
+        if any(k!=synthetic_key or rel!='companion/test/dsh-search.js' for k in keys):
             findings.append({'path':rel,'rule':'key_pattern'})
         if p.suffix in {'.app','.pdb','.dmp'} or p.name in {'Assembly-CSharp.dll','GameAssembly.dylib','global-metadata.dat','config.json','runtime.json','qq.json','conversations.sqlite'}:
             findings.append({'path':rel,'rule':'private_or_game_artifact'})

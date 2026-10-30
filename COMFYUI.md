@@ -1,5 +1,7 @@
 # 本机 ComfyUI 绘图与表情包
 
+当前正式端已增加 **绘图指令 → 本机 DSH/DeepSeek 画面设计 → 已配置本地工作流 → 成图核对**。DS 负责动作姿态、镜头构图和光影配色；未经核对或明显不符的图不直接交付，最多作一次内部修正。需要现有 DSH 登录及 `/ui/qq` 中已启用的阿里云识图配置；详细行为与限制见 [绘图准确性说明](docs/art-accuracy.md)。
+
 当前接入本机保存的 `qwen.json`：实际绘图模型是 **Z-Image Turbo**（`z_image_turbo_bf16.safetensors`），文本编码器是 **Qwen3 4B**（`qwen_3_4b.safetensors`），VAE 是 `ae.safetensors`。没有把工作流名称误认成 Qwen-Image 或下载其他模型。
 
 ## 使用

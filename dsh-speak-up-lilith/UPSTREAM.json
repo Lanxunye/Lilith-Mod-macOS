@@ -1,0 +1,13 @@
+{
+  "repository": "Yuuyuko-uu/dsh-speak-up",
+  "version": "0.2.3",
+  "commit": "c08df2bdf22d065326c48f82f4f572fb8de64251",
+  "license": "MIT (declared in upstream package.json; no LICENSE file at this commit)",
+  "files": {
+    "lib/host.js": "fe4142d94fda8ce9960452450ede60b2007e55c3",
+    "lib/selfupdate.mjs": "83b72a97b914726fe2dff50ba03f5ce5e204dbec",
+    "cordis.patch.yml": "d83cf5a799a0645529e626dbb4be04e4763c82a2",
+    "package.json": "d5c93a1e3aef2fd4bc77671fec82b2f4d7baeaa5",
+    "README.md": "4a529d7ee24fe08d9d79fc2c96a6749509f7babe"
+  }
+}

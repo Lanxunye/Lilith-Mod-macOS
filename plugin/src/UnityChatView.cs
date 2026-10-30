@@ -42,6 +42,14 @@ internal sealed class UnityChatView : IChatView
     private readonly Action _onResetSession;
     private readonly Action _onForgetPlayer;
     private readonly Action _onStopTask;
+    private readonly Action _onToggleSpeech;
+    private TextMeshProUGUI? _speechLabel;
+    private Button? _speechButton;
+    internal void SetSpeechState(bool enabled, bool pending, bool failed)
+    {
+        if (_speechLabel is not null) _speechLabel.text = pending ? "朗读：稍候" : failed && enabled ? "朗读：异常" : enabled ? "朗读：开" : "朗读：关";
+        if (_speechButton is not null) _speechButton.interactable = !pending;
+    }
     private TextMeshProUGUI? _taskStatusLabel;
     private TextMeshProUGUI? _taskModeLabel;
     internal void SetTaskStatus(string status, string goal)
@@ -217,13 +225,15 @@ internal sealed class UnityChatView : IChatView
         Action onConfigure,
         Action onResetSession,
         Action onForgetPlayer,
-        Action onStopTask)
+        Action onStopTask,
+        Action onToggleSpeech)
     {
         _onSubmit = onSubmit;
         _onConfigure = onConfigure;
         _onResetSession = onResetSession;
         _onForgetPlayer = onForgetPlayer;
         _onStopTask = onStopTask;
+        _onToggleSpeech = onToggleSpeech;
         _preferencesPath = Path.Combine(ModPaths.DataRoot,
             "ui.json");
         _focusController = ChatFocusController.Create();
@@ -687,7 +697,9 @@ internal sealed class UnityChatView : IChatView
         _taskStatusLabel.richText = false;
         _taskStatusLabel.enableWordWrapping = false;
         _taskStatusLabel.overflowMode = TextOverflowModes.Ellipsis;
-        SetAnchored(_taskStatusLabel.rectTransform, 124f, 0f, 264f, 30f, false, false);
+        _speechButton = AddButton("SpeechToggle", taskStrip.transform, "朗读：关", 124f, 0f, 104f, 30f, _onToggleSpeech, false, false);
+        _speechLabel = _speechButton.GetComponentInChildren<TextMeshProUGUI>();
+        SetAnchored(_taskStatusLabel.rectTransform, 236f, 0f, 152f, 30f, false, false);
         AddButton("TaskDetails", taskStrip.transform, "任务", 394f, 0f, 64f, 30f, () => MacSettingsLauncher.OpenPage("chat"), false, false);
         AddButton("TaskStop", taskStrip.transform, "停止", 464f, 0f, 64f, 30f, _onStopTask, false, false);
         BuildMemoryMenu(panelObject.transform);

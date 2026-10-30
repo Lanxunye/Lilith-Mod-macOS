@@ -12,7 +12,9 @@ internal sealed class MacSharedChatBridge
     private long _cursor;
     private bool _initialized;
     internal void Initialize(long cursor) { _cursor = cursor; _initialized = true; }
-    internal void Tick(bool ready, Action<bool, string> deliver)
+    internal void Tick(bool ready, Action<bool, string, bool> deliver)
+        => Tick(ready, (user, text, dialogue, emotion, duration) => deliver(user, text, dialogue));
+    internal void Tick(bool ready, Action<bool, string, bool, string, int> deliver)
     {
         if (!ready || Time.unscaledTime < _nextPoll) return;
         _nextPoll = Time.unscaledTime + 1f;
@@ -29,8 +31,19 @@ internal sealed class MacSharedChatBridge
             {
                 long seq = item.GetProperty("seq").GetInt64();
                 if (seq <= _cursor) continue;
-                deliver(item.GetProperty("role").GetString() == "user", item.GetProperty("content").GetString() ?? "");
+                bool isUser = item.GetProperty("role").GetString() == "user";
+                string text = item.GetProperty("content").GetString() ?? "";
+                string channel = item.TryGetProperty("channel", out var c) ? c.GetString() ?? "" : "";
+                string request = item.TryGetProperty("request_id", out var r) ? r.GetString() ?? "" : "";
+                bool proactive = !isUser && channel == "proactive" && request.StartsWith("speak-up:", StringComparison.Ordinal);
+                JsonElement metadata = default;
+                bool part = !isUser && item.TryGetProperty("reply_part", out metadata) && metadata.ValueKind == JsonValueKind.Object;
+                string emotion = part && metadata.TryGetProperty("emotion", out var e) ? e.GetString() ?? "neutral" : "neutral";
+                int duration = part && metadata.TryGetProperty("duration_ms", out var d) && d.TryGetInt32(out var ms) ? Math.Clamp(ms, 1000, 45000) : 6500;
+                deliver(isUser, channel == "qq" ? "[QQ] " + text : text, proactive || part, emotion, duration);
                 _cursor = seq;
+                // A delayed frame must not flash several queued replies at once.
+                if (part) { _nextPoll = Time.unscaledTime + 1.8f; return; }
             }
             _cursor = Math.Max(_cursor, latest);
         }

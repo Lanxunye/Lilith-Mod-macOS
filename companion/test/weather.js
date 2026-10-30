@@ -1,0 +1,18 @@
+'use strict';
+const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),assert=require('node:assert/strict');
+const {WeatherContext}=require('../src/weather');
+const root=fs.mkdtempSync(path.join(os.tmpdir(),'lilith-weather-test-'));let clock=Date.parse('2026-10-29T12:00:00Z'),owner='owner-a',locations=0,reads=0,deny=false,network=false,block=false,release;
+const options={root,getBinding:()=>owner,now:()=>clock,autoTick:false,locate:async({requestPermission})=>{locations++;assert.equal(requestPermission,false);return deny?{status:'permission_denied'}:{status:'available',latitude:35.1,longitude:111,accuracy_m:10000,observed_at:clock,city:'PRIVATE_CITY_CANARY'};},readWeather:async()=>{reads++;if(block)await new Promise(r=>release=r);if(network)throw Object.assign(Error('network'),{code:'weather_service_unreachable'});return {temperature_c:18.5,place:'PRIVATE_CITY_CANARY',data_type:'weather_model_estimate',observed_at:new Date(clock).toISOString(),fetched_at:new Date(clock).toISOString()};}};
+(async()=>{let w=new WeatherContext(options);try{
+ await w.refresh();assert.equal(locations,0);assert.equal(w.snapshot().status,'disabled');w.patch({enabled:true});await w.refresh();assert.equal(locations,0);assert.equal(reads,0);assert.equal(w.snapshot().status,'provider_consent_required');w.patch({enabled:true,provider_consent:true});
+ const first=await Promise.all([w.refresh(),w.refresh()]);assert(first.every(r=>r.available));assert.equal(locations,1);assert.equal(reads,1);assert(!JSON.stringify(w.status()).includes('latitude'));assert(!JSON.stringify(w.snapshot('qq_group')).includes('PRIVATE_CITY_CANARY'));
+ await w.refresh();assert.equal(reads,1);w.close();w=new WeatherContext(options);await w.refresh();assert.equal(reads,1,'persisted fresh cache survives restart');
+ clock+=31*60000;assert.equal(w.snapshot().available,false);assert.equal(w.snapshot().status,'stale');assert(!w.snapshot().current);await w.refresh();assert.equal(reads,2);assert.equal(locations,1,'coarse location reused within six hours');
+ clock+=61000;network=true;await w.refresh({force:true});assert.equal(w.snapshot().available,true);assert.equal(w.snapshot().status,'cached_after_error');assert.equal(w.snapshot().last_error,'weather_service_unreachable');
+ clock+=31*60000;assert.equal(w.snapshot().available,false);assert(!w.snapshot().current,'stale temperature cannot enter current prompt');network=false;
+ owner='owner-b';assert.equal(w.snapshot().status,'owner_binding_changed');assert(!JSON.stringify(w.status()).includes('PRIVATE_CITY_CANARY'));await w.refresh();assert.equal(locations,1);w.patch({enabled:true,provider_consent:true});await w.refresh();assert.equal(locations,2);
+ deny=true;clock+=61000;await w.refresh({forceLocation:true});assert.equal(w.snapshot().status,'permission_denied');assert(!w.snapshot().current);deny=false;
+ clock+=61000;block=true;const pending=w.refresh({forceLocation:true});while(!release)await new Promise(r=>setTimeout(r,1));w.patch({enabled:false});release();await pending;assert.equal(w.snapshot().status,'disabled');assert.deepEqual(JSON.parse(fs.readFileSync(path.join(root,'weather/state.json'))),{},'disable cannot be undone by late completion');
+ assert.throws(()=>w.patch({latitude:33}),e=>e.code==='weather_invalid_setting');assert.throws(()=>w.patch({refresh_minutes:1}),e=>e.code==='weather_invalid_setting');
+ console.log('weather: disabled-by-default, single flight, persistent cache expiry, private/group and owner binding isolation, denied location, cached network failure and in-flight revocation passed.');
+}finally{w.close();fs.rmSync(root,{recursive:true,force:true});}})().catch(e=>{console.error(e);process.exitCode=1;});

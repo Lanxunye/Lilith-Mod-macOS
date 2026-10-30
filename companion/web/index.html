@@ -1,13 +1,69 @@
 <!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>莉莉丝 · Mod 设置</title><link rel="stylesheet" href="/ui/style.css"><script src="/ui/app.js" defer></script></head>
-<body><main><header><span class="accent"></span><div><p class="eyebrow">THE NOEXISTENCEN OF LILITH</p><h1>莉莉丝的房间</h1></div><span id="connection" class="badge">正在连接</span></header>
+<body><main><header><span class="accent"></span><div><p class="eyebrow">THE NOEXISTENCEN OF LILITH</p><h1>莉莉丝 · Mod 控制台</h1></div><span id="connection" class="badge">正在连接</span></header>
 <nav><button data-tab="chat">聊天</button><button data-tab="art">绘图与表情包</button><button data-tab="settings">Mod 设置</button><button data-tab="memory">长期记忆</button><button data-tab="extensions">扩展服务</button><button data-tab="qq">QQ 桥接 · 测试版</button></nav>
-<p id="notice" role="status"></p>
-<section id="chat" hidden><p class="hint">莉莉丝可以在聊天中自主发送表情包；每连续 3 轮对话最多触发 1 次，完成后会直接出现在消息中。</p><div id="messages" aria-live="polite"></div><div class="task-toolbar"><label for="task-mode">协作方式</label><select id="task-mode"><option value="auto">自动协作</option><option value="chat">仅聊天</option><option value="dsh">本条交给 DSH</option></select></div><p id="task-target" class="hint"></p><div id="task-cards" aria-live="polite"></div><form id="chat-form"><label for="message">想对莉莉丝说什么？</label><textarea id="message" rows="3" maxlength="2000" placeholder="写下你的话，按发送与她聊聊。"></textarea><div class="actions"><button type="button" id="reset-session">开始新对话</button><button class="primary" id="send">发送</button></div></form></section>
+<p id="notice" role="status"></p><details id="dsh-panel" open><summary>DSH 工作区与操作确认</summary><p id="dsh-state" role="status"></p><p class="hint">桌面与绑定主人私聊直接使用 DSH 的认证、模型与受信 MCP 配置。专用工作区可以读取全盘普通文本文件；删除、写入、终端、外发及未知插件工具须逐次再次确认。群聊和内部判断会话禁止本机工具。插件本身是受信任代码，工具守卫不等于恶意插件的系统沙箱。配置变更后停止再连接即可重新载入。</p><button id="dsh-start" type="button">连接 DSH</button><button id="dsh-stop" type="button">停止 DSH</button><div id="dsh-approvals" aria-live="polite"></div></details>
+<section id="chat" hidden><div class="actions"><label><input type="checkbox" id="chat-speech-enabled"> 朗读莉莉丝的新回复</label><span id="chat-speech-state" role="status"></span></div><p class="hint">莉莉丝会按意思分条说话，收到新消息时停止剩余旧话。</p><p class="hint">莉莉丝可以在聊天中自主发送表情包；每连续 3 轮对话最多触发 1 次，完成后会直接出现在消息中。</p><div id="messages" aria-live="polite"></div><div class="task-toolbar" hidden><label for="task-mode">协作方式</label><select id="task-mode"><option value="auto">自动协作</option><option value="chat">仅聊天</option><option value="dsh">本条交给 DSH</option></select></div><p id="task-target" class="hint"></p><div id="task-cards" aria-live="polite"></div><form id="chat-form"><label for="message">想对莉莉丝说什么？</label><textarea id="message" rows="3" maxlength="2000" placeholder="写下你的话，按发送与她聊聊。"></textarea><div class="actions"><button type="button" id="reset-session">开始新对话</button><button class="primary" id="send">发送</button></div></form></section>
 <section id="settings" hidden><form id="name-form"><fieldset><legend>你的称呼</legend><label class="field"><span>当前玩家名</span><input id="player-name" maxlength="128" aria-label="当前玩家名"></label><p class="hint">由运行中的游戏检查并保存称呼。原名称的记忆保留，同时合并到新名称。</p><div class="actions"><button type="button" id="validate-name">检查名称</button><button>保存称呼</button></div></fieldset></form><form id="settings-form"><div id="setting-fields"></div><div class="actions"><button class="primary">保存设置</button></div></form></section>
 <section id="memory" hidden><h2>她记得的你</h2><p class="hint">这些记忆保存在本机。修改后会用于之后的对话，聊天历史会保留。</p><div id="memory-facts"></div><div class="actions"><button id="add-fact">添加一条</button><button id="save-memory" class="primary">保存记忆</button></div></section>
 <section id="art" hidden><h2>莉莉丝的小画室</h2><p class="hint">使用本机 ComfyUI。角色特征和性格规则会自动加入；你可以指定情景、表情或衣着。开启自主绘图后，她也可以在对话中选择插画或表情包。</p><form id="art-form"><label class="field"><span>画什么</span><select id="art-kind"><option value="auto">自动选择</option><option value="illustration">插画</option><option value="sticker">表情包</option></select></label><label for="art-scene">情景或心情</label><textarea id="art-scene" maxlength="1400" rows="3" placeholder="例如：莉莉丝微微得意地说，包在我身上。"></textarea><label class="field"><span>表情包配字</span><input id="art-caption" maxlength="24" placeholder="例如：包在我身上"></label><div class="actions"><button id="art-submit" class="primary">开始绘制</button><button id="art-refresh" type="button">刷新画室</button></div></form><p id="art-state" role="status"></p><details><summary>角色与美术规则</summary><pre id="art-rules"></pre><p class="hint">文字约束可降低偏差，不能保证每张图都与原作一致；当前工作流不含角色 LoRA 或参考图。纯色背景不等于透明背景。</p></details><div id="art-jobs"></div></section>
-<section id="extensions" hidden><h2>本地扩展服务</h2><p class="hint">ComfyUI 的自主绘图开关和工作流在这里配置。DSH 按允许范围执行任务；可读取的文件或文件夹请每行填写一个绝对路径。首版支持 UTF-8 文本文件与新建文本产物，终端和浏览器操作暂未开放。</p><form id="extension-form"><div id="extension-fields"></div><div class="actions"><button class="primary">保存扩展配置</button></div></form></section>
-<section id="qq" hidden><h2>莉莉丝 · QQ 桥接（测试版）</h2><p class="hint">Beta：私聊和群聊已在开发者本机测试，其他设备与长期稳定性仍需验证。QQ 绘图、附件识别尚未支持；正式游戏端跨窗口同步仍待新版插件实机验收。</p><p class="hint">回复绑定主人的文字私聊，以及白名单群聊。群聊由 @ 开启，每轮最多 10 条回复，所有群合计每天最多 50 条（北京时间）；不读取群文件或识别媒体。基础人设与桌宠共用；QQ 不执行 DSH 任务、不自主绘图。第三方协议接入存在账号风控风险，验证或发送异常时会暂停。</p><form id="qq-form"><div id="qq-fields"></div><div class="actions"><button class="primary">保存 QQ 配置</button><button type="button" id="qq-probe">检查小号连接</button><button type="button" id="qq-pause">暂停</button></div></form><p id="qq-state" role="status"></p><p class="hint">协议端设置：OneBot HTTP API 仅监听 127.0.0.1；事件上报到本服务的 /onebot/events，消息格式选 array。事件 Secret 与下方填写值一致。留空保留已保存密钥。常驻服务启动后，关闭游戏不会下线；尚未扫码实测前不代表已接通。</p><details><summary>群聊轮次与每日额度</summary><pre id="qq-groups"></pre></details><details><summary>消息交付状态</summary><pre id="qq-deliveries"></pre></details><details><summary>近期摘要与事实来源</summary><pre id="qq-memory"></pre></details></section>
+<section id="extensions" hidden><h2>本地扩展服务</h2><p class="hint">ComfyUI 的自主绘图开关和工作流在这里配置。所有对话统一接入 DSH，不再读取 Mod 中的对话 API Key。模型和 MCP 在 DSH 端配置；当前仅自动迁移受信配置，含明文密钥的插件配置需单独审查，控制台会显示跳过数量。</p><form id="extension-form"><div id="extension-fields"></div><div class="actions"><button class="primary">保存扩展配置</button></div></form><details id="weather-panel" open><summary>当地天气与系统定位</summary>
+<p class="hint">只用于桌面与主人 QQ 私聊。系统位置取整为约10公里范围后向 Open-Meteo 查询，坐标不进入对话与长期记忆。显示的是室外天气模型数据，不能测量室温。天气默认每30分钟更新，近似位置最多复用6小时；首次需允许 macOS 定位。</p>
+<p id="weather-state" role="status">点击刷新读取状态</p>
+<form id="weather-form"><label><input id="weather-enabled" type="checkbox"> 允许莉莉丝使用当地天气</label><label><input id="weather-consent" type="checkbox"> 允许将约10公里范围的近似坐标发送至 api.open-meteo.com 查询天气</label><button type="submit">保存天气开关</button><button id="weather-locate" type="button">系统定位并查询天气</button><button id="weather-refresh" type="button">刷新天气</button></form>
+<p class="hint">天气来源：<a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a> · CC BY 4.0。位置授权可在系统设置的隐私与安全性中管理；关闭本开关会停止更新并清除本模块缓存。</p></details></section>
+<section id="qq" hidden><h2>莉莉丝 · QQ 桥接（测试版）</h2><p class="hint">Beta：基础私聊和群聊已在开发者本机测试；新增自主能力仍需实机验收。其他设备与长期稳定性仍需验证。QQ 绘图及文件、视频、语音识别尚未支持；正式游戏端跨窗口同步仍待新版插件实机验收。</p><p class="hint">回复绑定主人的文字私聊，以及白名单群聊。群聊选择性接话，@ 优先唤醒，按话题自行停止；所有群合计每天最多 100 条（北京时间）。图片识别、主人私聊表情及同群斗图须单独开启，不读取群文件。私聊由模型按语境选择已有表情，每连续3轮最多一次；不会因此自动绘图。仅收集模式只识别主人私聊的图片，将识别为表情的原图和标签存入本机表情库，所有回复保持关闭；无需加入 QQ 收藏夹。基础人设与桌宠共用；主人私聊已接入 DSH，可在逐次确认后执行本机任务；群聊不开放本机工具，QQ 暂不自主绘图。第三方协议接入存在账号风控风险，验证或发送异常时会暂停。</p><p class="hint">联网使用 deepseek_native 时复用 DSH 官方 Key，无需另填搜索密钥。仅提交公开关键词，不发送聊天全文或 IP 定位。私聊和每群各有每日请求上限，Search、Fetch 与重试均计数，缓存命中不计数。官方费用为成功非空请求每千次 5 元；本通道按官方 API 计费。</p><form id="qq-form"><div id="qq-fields"></div><div class="actions"><button class="primary">保存 QQ 配置</button><button type="button" id="qq-probe">检查小号连接</button><button type="button" id="qq-pause">暂停</button><button type="button" id="qq-vision-probe">测试看图接口</button><button type="button" id="qq-search-probe">测试私聊联网接口</button></div></form><p id="qq-state" role="status"></p><p class="hint">协议端设置：OneBot HTTP API 仅监听 127.0.0.1；事件上报到本服务的 /onebot/events，消息格式选 array。事件 Secret 与下方填写值一致。留空保留已保存密钥。常驻服务启动后，关闭游戏不会下线；尚未扫码实测前不代表已接通。</p><details id="qq-mind-panel"><summary>统一交流状态与只读预演</summary>
+<p id="qq-mind-summary" class="hint"></p>
+<p class="hint">观察模式比较模型提案与状态建议，不改变现有回复。启用后可减少低交流余量时的普通插话、尊重成员少打扰请求，并让明确问题优先得到完整文字回答。熟悉度不会改变权限或答案质量；所有模式均受暂停、仅收集和每日额度约束。</p>
+<form id="qq-mind-preview-form">
+<label class="field"><span>范围（group:群号 或 private:主人号）</span><input id="qq-mind-scope" required></label>
+<label class="field"><span>成员 QQ（同名成员依账号区分）</span><input id="qq-mind-member" required inputmode="numeric"></label>
+<label class="field"><span>模拟收到的文字（不会保存或发送）</span><textarea id="qq-mind-text" rows="3" maxlength="2000" required></textarea></label>
+<label class="field"><span>模拟明确 @ / 主人私聊</span><input id="qq-mind-force" type="checkbox"></label>
+<label class="field"><span>模拟模型提案（本预演不调用模型）</span><select id="qq-mind-proposal"><option value="reply">回复</option><option value="wait">等待</option><option value="skip">略过</option></select></label>
+<button>仅预演，不发送</button></form>
+<p id="qq-mind-preview-summary" role="status"></p>
+<details><summary>预演完整数据</summary><pre id="qq-mind-preview-result"></pre></details>
+<label class="field"><span>管理上方范围内的成员边界（点击后保存）</span><select id="qq-mind-member-action"><option value="quiet">24 小时少打扰</option><option value="resume">解除少打扰</option><option value="opt_out">停止并清除本层成员关系记录</option><option value="opt_in">允许本层记录成员关系</option><option value="reset">重置熟悉度（保留退出选择）</option></select></label>
+<button type="button" id="qq-mind-control">保存成员边界</button>
+<details><summary>状态快照与最近决策原因</summary><pre id="qq-mind-state"></pre></details></details>
+<details><summary>新能力状态</summary><pre id="qq-capabilities"></pre></details><details><summary>群聊话题与每日额度</summary><pre id="qq-groups"></pre></details><details><summary>消息交付状态</summary><pre id="qq-deliveries"></pre></details><details><summary>近期摘要与事实来源</summary><pre id="qq-memory"></pre></details></section>
+<details id="mood-panel"><summary>莉莉丝的心情</summary>
+<p class="hint">桌面、网页与主人私聊共享。每轮结束后由 DSH 判断情绪；群聊与内部判断不计入。判断失败会保留原来的心情。</p>
+<p class="hint">原游戏摸头、揉头、手部互动、摸脸可增加当日心情与长期依赖度。同类互动有冷却；当日额外心情最多 +20，于本机时间 0:00 清零，依赖度保留（每日最多 +2）。</p>
+<p id="mood-state" role="status">等待读取</p><p id="mood-reason"></p><p id="mood-dims"></p>
+<form id="mood-form"><label class="field"><span>每轮判断心情</span><input id="mood-enabled" type="checkbox"></label>
+<label class="field"><span>如何影响表达</span><select id="mood-mode"><option value="event">带入这次变化与原因</option><option value="label">只带入心情</option><option value="off">仅记录，不影响表达</option></select></label>
+<button type="submit">保存心情设置</button></form>
+<details><summary>最近的心情变化</summary><div id="mood-timeline"></div></details></details>
+<details id="fish-memory-panel"><summary>莉莉丝的长期记忆</summary>
+<p class="hint">桌面与主人私聊共享。重要经历会逐渐淡忘，稳定事实保留；只在当前话题有关时想起。关闭后停止新增与召回，已有内容保留。</p>
+<p id="fish-memory-state" role="status">等待读取</p>
+<form id="fish-memory-form">
+<label class="field"><span>使用长期记忆</span><input id="fish-memory-enabled" type="checkbox"></label>
+<label class="field"><span>普通事件半衰期（天）</span><input id="fish-memory-half" type="number" min="15" max="60"></label>
+<label class="field"><span>每天最多新增（条）</span><input id="fish-memory-quota" type="number" min="1" max="30"></label>
+<button type="submit">保存记忆设置</button></form>
+<details><summary>最近保存的记忆</summary><div id="fish-memory-list"></div></details>
+<details><summary>最近一次召回依据</summary><pre id="fish-memory-trace"></pre></details>
+</details>
+<details id="speak-up-panel"><summary>莉莉丝主动搭话</summary>
+<p class="hint">本地定时掷骰，命中后才生成。聊天中会避让；主人未回复时不连续搭话。重启后先正常聊过一轮，再等待主动开口。</p>
+<p id="speak-up-state" role="status">等待读取</p>
+<form id="speak-up-form">
+<label class="field"><span>启用主动搭话</span><input id="speak-up-enabled" type="checkbox"></label>
+<label class="field"><span>试运行（只记触发，不开口）</span><input id="speak-up-dry" type="checkbox"></label>
+<label class="field"><span>桌面投递</span><input id="speak-up-desktop" type="checkbox"></label>
+<label class="field"><span>主人 QQ 私聊投递</span><input id="speak-up-qq" type="checkbox"></label>
+<label class="field"><span>掷骰间隔（分钟）</span><input id="speak-up-interval" type="number" min="1" max="1440"></label>
+<label class="field"><span>至少安静多久（分钟）</span><input id="speak-up-idle" type="number" min="1" max="1440"></label>
+<label class="field"><span>每日生成上限</span><input id="speak-up-limit" type="number" min="1" max="24"></label>
+<label class="field"><span>安静时段开始（北京时间）</span><input id="speak-up-quiet-start" type="number" min="0" max="23"></label>
+<label class="field"><span>安静时段结束（开始=结束则关闭）</span><input id="speak-up-quiet-end" type="number" min="0" max="23"></label>
+<label class="field"><span>工作时段基础命中线（%）</span><input id="speak-up-peak" type="number" min="0" max="100"></label>
+<label class="field"><span>其他时段基础命中线（%）</span><input id="speak-up-offpeak" type="number" min="0" max="100"></label>
+<button type="submit">保存搭话设置</button><button id="speak-up-preview" type="button">只读演练（不会发送）</button></form>
+<pre id="speak-up-preview-result"></pre><details><summary>最近触发与交付记录</summary><pre id="speak-up-log"></pre></details>
+</details>
 <footer>macOS 开发版 · 配置与记忆保存在本机</footer></main></body></html>

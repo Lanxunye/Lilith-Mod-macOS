@@ -46,7 +46,7 @@ async function runCase(name, handler, expected, timeout = 3000) {
     media: { enabled: false },
     web_search: { enabled: false }
   }));
-  const app = createApp();
+  const app = createApp({chatEngine:'provider-test'});
   await listen(app.server);
   const start = Date.now();
   try {

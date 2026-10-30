@@ -1,0 +1,6 @@
+{
+  "repository": "https://github.com/Yuuyuko-uu/dsh-bili-subagent",
+  "commit": "68f25ed058cf06c9c1c2f4a99d36c3ff788155d0",
+  "version": "0.8.7",
+  "adaptation": "Read-only host bridge and bounded independent reader. No upstream social, scheduling or model tools are loaded. Python reading flow adapted from vendor/bilibili-mcp/mcp_server.py."
+}

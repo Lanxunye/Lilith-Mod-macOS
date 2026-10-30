@@ -3,6 +3,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('nod
 const root=fs.mkdtempSync(path.join(os.tmpdir(),'lilith-qq-'));
 process.env.LILITH_AI_DATA_DIR=root;
 process.env.LILITH_AI_CONFIG=path.join(root,'config.json');
+let offset=0;
 let prompts=[],calls=0,sends=[],failSend=false;
 (async()=>{
  const fake=http.createServer(async(req,res)=>{
@@ -13,7 +14,7 @@ let prompts=[],calls=0,sends=[],failSend=false;
  });
  await new Promise(r=>fake.listen(0,'127.0.0.1',r));const upstream=`http://127.0.0.1:${fake.address().port}`;
  fs.writeFileSync(process.env.LILITH_AI_CONFIG,JSON.stringify({mock_mode:false,media:{enabled:false},provider:{api_key:'fixture',kind:'deepseek',base_url:upstream,model:'fixture',wire_api:'chat_completions'},memory:{max_messages:4},integrations:{dsh:{enabled:true,transport:'stdio',executable:'/missing/dsh'},comfy:{enabled:true,autonomous_enabled:true}}}));
- const {createApp}=require('../src/server');const app=createApp({qqOptions:{autoTick:false}});
+ const {createApp}=require('../src/server');const app=createApp({chatEngine:'provider-test',qqOptions:{autoTick:false,now:()=>new Date(Date.now()+offset),decide:async()=>({action:'reply'})}});
  await new Promise(r=>app.server.listen(0,'127.0.0.1',r));const base=`http://127.0.0.1:${app.server.address().port}`;
  async function api(url,method='GET',body){const r=await fetch(base+url,{method,headers:{Authorization:'Bearer '+app.token,'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body)});return {status:r.status,body:await r.json()};}
  const secret='test-signature-key';
@@ -50,7 +51,7 @@ let prompts=[],calls=0,sends=[],failSend=false;
    assert.equal((await event(5,{message:[{type:'image',data:{file:'x'}}]})).body.accepted,true);await app.qq.tick();assert.equal(calls,2);
    await new Promise(r=>setTimeout(r,1010));await app.qq.tick();assert.equal(sends.length,3);assert.match(sends[2].message[0].data.text,/不能识别/);
    // Group contexts must never inherit private owner history/facts or desktop memory files.
-   await api('/v1/qq','PATCH',{group_enabled:true,group_ids:['444444']});
+   await api('/v1/qq','PATCH',{quiet_ms:0,group_enabled:true,group_ids:['444444']});
    await new Promise(r=>setTimeout(r,1010));
    assert.equal((await event(600,{message_type:'group',group_id:444444,user_id:333333,message:[{type:'at',data:{qq:'222222'}},{type:'text',data:{text:'你好，介绍一下自己'}}]})).body.accepted,true);
    await app.qq.tick();assert.equal(calls,3);
@@ -59,6 +60,7 @@ let prompts=[],calls=0,sends=[],failSend=false;
    assert.equal(app.store.recent('qq-group:222222:444444').length,2);
    assert.equal((await api('/v1/session/desktop-pet/history')).body.messages.some(m=>m.content.includes('群成员')),false);
    for(const user of [333333,555555]){
+     offset+=10000;
      await event(601+user,{message_type:'group',group_id:444444,user_id:user,sender:{card:'同名群友'},message:[{type:'text',data:{text:'我计划周六看海'}}]});
      await app.qq.tick();
    }

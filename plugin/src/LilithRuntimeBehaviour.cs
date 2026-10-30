@@ -25,6 +25,7 @@ public sealed class LilithRuntimeBehaviour
     private readonly MacArtworkBridge _artworkBridge = new();
     private readonly MacTaskBridge _taskBridge = new();
     private readonly MacSharedChatBridge _sharedChatBridge = new();
+    private readonly MacSpeechBridge _speechBridge = new();
     private readonly StartupUpdateCoordinator _startupUpdateCheck = new();
     private CancellationTokenSource _lifetime = new();
     private string _input = "";
@@ -74,13 +75,20 @@ public sealed class LilithRuntimeBehaviour
 
     public void Update()
     {
+        PetInteractionTelemetry.Tick(_client, _lifetime.Token);
+        MacMusicPlayerDefinitions.Tick();
+        MacBuiltInMusicBridge.Tick();
         EnsureChatWindowInitialized();
+        _speechBridge.Tick(ChatState.View as UnityChatView);
         _artworkBridge.Tick(ChatState.View as UnityChatView, ShowChatWindow,
             text => AppendChatMessage(ChatSpeaker.System, text), DeliverChatSticker);
         _taskBridge.Tick(ChatState.View as UnityChatView, () => !_requestPending,
             text => ApplyReply(text, "neutral", 6500, "ok", Array.Empty<ChatCitation>()));
-        _sharedChatBridge.Tick(_chatHistoryLoaded && !_requestPending, (isUser, text) =>
-            AppendChatMessage(isUser ? ChatSpeaker.User : ChatSpeaker.Lilith, "[QQ] " + text));
+        _sharedChatBridge.Tick(_chatHistoryLoaded && !_requestPending, (isUser, text, proactive, emotion, duration) =>
+        {
+            if (proactive) ApplyReply(text, emotion, duration, "ok", Array.Empty<ChatCitation>());
+            else AppendChatMessage(isUser ? ChatSpeaker.User : ChatSpeaker.Lilith, text);
+        });
         ChatState.View?.Tick();
         if (ChatState.View is UnityChatView unityView)
         {
@@ -252,7 +260,8 @@ public sealed class LilithRuntimeBehaviour
                     OpenApiConfiguration,
                     ResetSession,
                     ForgetPlayer,
-                    StopCurrentTask);
+                    StopCurrentTask,
+                    () => _speechBridge.Toggle(_client, _lifetime.Token));
                 ChatState.View.SetMessages(ChatState.Model.Messages);
                 LilithModPlugin.PluginLog.LogInfo("Unity chat view initialized");
             }

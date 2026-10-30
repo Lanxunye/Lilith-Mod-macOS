@@ -26,7 +26,7 @@ const { createPlayerNameBridge } = require('../src/player-name');
     else {res.statusCode=404;res.end('{}');}
   });
   await new Promise(r=>fake.listen(0,'127.0.0.1',r));
-  const app=createApp();await new Promise(r=>app.server.listen(0,'127.0.0.1',r));
+  const app=createApp({chatEngine:'provider-test'});await new Promise(r=>app.server.listen(0,'127.0.0.1',r));
   const base=`http://127.0.0.1:${app.server.address().port}`;
   async function call(route,method='GET',body,auth=true){const r=await fetch(base+route,{method,
     headers:{'Content-Type':'application/json',...(auth?{Authorization:`Bearer ${app.token}`}:{})},body:body===undefined?undefined:JSON.stringify(body)});

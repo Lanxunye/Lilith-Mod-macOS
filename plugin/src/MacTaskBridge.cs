@@ -9,37 +9,10 @@ namespace LilithMod;
 
 internal static class TaskChatMode
 {
-    private static string? _mode;
-    internal static string Mode
-    {
-        get
-        {
-            if (_mode is not null) return _mode;
-            try
-            {
-                using var doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(ModPaths.DataRoot, "task-ui.json")));
-                _mode = doc.RootElement.GetProperty("mode").GetString();
-            }
-            catch
-            {
-                try
-                {
-                    using var config = JsonDocument.Parse(File.ReadAllText(Path.Combine(ModPaths.DataRoot, "config.json")));
-                    _mode = config.RootElement.GetProperty("integrations").GetProperty("dsh").GetProperty("default_mode").GetString();
-                }
-                catch { }
-            }
-            return _mode = _mode is "auto" or "chat" or "dsh" ? _mode : "auto";
-        }
-        set
-        {
-            _mode = value is "auto" or "chat" or "dsh" ? value : "auto";
-            try { File.WriteAllText(Path.Combine(ModPaths.DataRoot, "task-ui.json"), JsonSerializer.Serialize(new { mode = _mode })); }
-            catch { }
-        }
-    }
-    internal static string Label => Mode == "chat" ? "仅聊天" : Mode == "dsh" ? "本条交给 DSH" : "自动协作";
-    internal static void Cycle() => Mode = Mode == "auto" ? "chat" : Mode == "chat" ? "dsh" : "auto";
+    // Every conversation now uses DSH; the button opens its status/approval console.
+    internal static string Mode { get => "auto"; set { } }
+    internal static string Label => "DSH 对话";
+    internal static void Cycle() => MacSettingsLauncher.OpenPage("chat");
 }
 
 internal sealed class MacTaskBridge
@@ -51,6 +24,21 @@ internal sealed class MacTaskBridge
     {
         if (view is null || Time.unscaledTime < _nextPoll) return;
         _nextPoll = Time.unscaledTime + 1f;
+        string nativeState = Path.Combine(ModPaths.DataRoot, "dsh-lilith", "status.json");
+        if (File.Exists(nativeState))
+        {
+            try
+            {
+                using var state = JsonDocument.Parse(File.ReadAllText(nativeState));
+                JsonElement data = state.RootElement;
+                bool active = data.TryGetProperty("active", out var current) && current.ValueKind == JsonValueKind.True;
+                int pending = data.TryGetProperty("pending", out var count) && count.TryGetInt32(out var n) ? n : 0;
+                bool running = data.TryGetProperty("running", out var runtime) && runtime.ValueKind == JsonValueKind.True;
+                view.SetTaskStatus(active ? "DSH 处理中" : pending > 0 ? "等待明文确认" : running ? "DSH 已连接" : "DSH 待连接", "莉莉丝独立工作区");
+                return;
+            }
+            catch { return; }
+        }
         string root = Path.Combine(ModPaths.DataRoot, "dsh-tasks");
         if (!Directory.Exists(root)) return;
         try

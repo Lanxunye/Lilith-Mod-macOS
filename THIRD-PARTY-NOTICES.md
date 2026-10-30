@@ -54,3 +54,15 @@ Windows 发布包捆绑以下运行组件，玩家无需另行安装。各组件
 
 本项目不修改上述组件的许可证。若发布包内随附的完整许可证文本与本摘要存在
 差异，以随附文本及组件上游项目的许可证为准。
+
+### dsh-speak-up
+
+来源：https://github.com/Yuuyuko-uu/dsh-speak-up ，Yuuyuko-uu，0.2.3，固定提交见 dsh-speak-up-lilith/UPSTREAM.json。上游 package.json 声明 MIT；该提交无独立 LICENSE 文件。适配保留来源并随附 MIT 文本，只复用本地触发算法，未启用上游网络更新和网页。
+
+### dsh-bili-subagent 与 bilibili-mcp
+
+来源：https://github.com/Yuuyuko-uu/dsh-bili-subagent ，Yuuyuko-uu，基于 c1overzz/dsh-bili-scroll，MIT。固定上游 0.8.7 提交与适配范围见 `dsh-bili-subagent-lilith/UPSTREAM.json`；保留原始源码供比对。字幕、简介、搜索和评论读取流程参考其内置 bilibili-mcp（Copyright (c) 2026 AGI_Ananas，MIT），许可文本合并保存在适配包 `LICENSE`。正式适配包不装载原版社交工具或原定时器。Python 依赖安装于独立运行环境，沿用各自许可证，安装版本记录于 `requirements.lock.txt`。
+
+### Purge 莉莉丝适配源码
+
+来源：https://github.com/kingcharleslzy-ai/dsh-purge ，Copyright (c) 2026 小杨，MIT。本版在 `dsh-purge-lilith/` 分发已适配源码和原许可；不包含私人配置、node_modules 或安装时应用的宿主二进制补丁。适配说明见该目录 `LILITH-ADAPTATION.md`。部署包首次按官方 SHA-256 下载 Node 24.22.1，由下载组件保留其自身许可证；ZIP 不捆绑 Node。

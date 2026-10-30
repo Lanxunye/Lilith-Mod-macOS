@@ -17,9 +17,9 @@ python3 - "$ROOT" "$NODE" "$DOTNET" <<'PY'
 from pathlib import Path
 import subprocess,sys
 root=Path(sys.argv[1]);node=sys.argv[2];sdk=sys.argv[3]
-tests=['localization','locale-prompts','lore','lore-candidates','local-context','response-normalization',
+tests=['weather-source','weather','weather-host','startup-services','music-source','music-learning','music-host','bili-links','bili-learning','bili-bridge','bili-host','speech-prosody','qq-command-help','qq-speech','qq-voice-modes','chat-speech','chat-speech-api','desktop-text-follow','pet-interactions','reply-segmentation','group-reply-parts','reply-fallback-host','lilith-expression','conversation-warmth','host-capabilities','owner-public-memory','host-context-integration','meme-library','sticker-selection','sticker-post-reply','reply-parts','reply-parts-delivery','dsh-speak-up','dsh-memory-host','dsh-memory','lilith-style','localization','locale-prompts','lore','lore-candidates','local-context','response-normalization',
        'update-check','smoke','provider-compat','provider-reliability','provider-dns','provider-recovery',
-       'gemini-interactions','language-retry','process-lifecycle','mac-api','artwork','dsh-tasks','dsh-routing','dsh-runtime','qq-bridge','qq-groups','qq-speakers','companion-service','conversation-store']
+       'gemini-interactions','language-retry','process-lifecycle','mac-api','art-scene','artwork','dsh-tasks','dsh-routing','dsh-runtime','dsh-profile','dsh-guard','dsh-conversation','qq-bridge','qq-group-art-reply','qq-group-art','qq-groups','qq-speakers','qq-capabilities','qq-social','qq-public-web','qq-media','qq-image','qq-collection','qq-collection-retry','qq-mainline','qq-mind','qq-mind-bridge','qq-mind-ui','qq-sticker-delivery','qq-private-stickers','qq-vision-ui','companion-service','conversation-store']
 for test in tests:
     subprocess.run([node,'test/'+test+'.js'],cwd=root/'companion',check=True)
 for project in sorted((root/'tests').rglob('*.csproj')):

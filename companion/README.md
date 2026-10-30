@@ -1,3 +1,5 @@
+> macOS dev12: QQ 私聊和群聊语音分别控制，默认仅温柔模式；`/lls` 查看完整帮助。当前 macOS 正式文字对话使用 DSH 原生 SDK，模型和认证在 DSH 中配置，旧 provider 温度不控制原生 DSH 对话。详见[中文 README](../README.md)、[QQ 命令](../docs/qq-commands.md)及[语音说明](../docs/chat-speech.md)。
+
 > macOS port: see [usage guide](../docs/usage.md). On macOS the default data directory is `~/Library/Application Support/LilithAI`; QQ bridge is beta and lives in the shared WebUI. Start with `node scripts/open-console.cjs` from the repository root. Windows bundle references below describe the upstream release.
 
 # Lilith Companion

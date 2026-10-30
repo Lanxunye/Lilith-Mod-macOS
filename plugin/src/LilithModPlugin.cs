@@ -49,11 +49,13 @@ public sealed class LilithModPlugin : BasePlugin
             return;
         }
 
+        if (!noRuntime) PetInteractionTelemetry.InitializePolling();
         if (!noPatches)
         {
             _harmony = new Harmony(PluginGuid);
             _harmony.PatchAll(typeof(UserInterfacePatches));
             CrossScreenDragPatches.Apply(_harmony);
+            PetInteractionTelemetry.Apply(_harmony);
             Log.LogInfo("User interface polling registered");
         }
         if (!noRuntime)
@@ -71,6 +73,7 @@ public sealed class LilithModPlugin : BasePlugin
 
     public override bool Unload()
     {
+        PetInteractionTelemetry.Disable();
         _macPump?.Dispose();
         _macPump = null;
         _harmony?.UnpatchSelf();

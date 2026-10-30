@@ -1,0 +1,25 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),os=require('node:os');
+const {DatabaseSync}=require('node:sqlite'),{MusicSource,track,matchTrack}=require('../src/music-source');
+const {features,analyzeAudio}=require('../src/music-audio');
+(async()=>{const root=fs.mkdtempSync(path.join(os.tmpdir(),'lilith-music-source-'));try{
+ const dir=path.join(root,'Documents/storage');fs.mkdirSync(path.join(dir,'file_storage/webdata/file'),{recursive:true});const db=new DatabaseSync(path.join(dir,'sqlite_storage.sqlite3'));
+ db.exec('CREATE TABLE dbTrack(id TEXT,jsonStr TEXT);CREATE TABLE persistentModel(uniKey TEXT,jsonStr TEXT)');
+ const song={id:12345,name:'测试曲',artists:[{name:'甲'},{name:'乙'}],album:{name:'测试专辑'},duration:100000};
+ db.prepare('INSERT INTO dbTrack VALUES (?,?)').run('12345',JSON.stringify(song));
+ db.prepare('INSERT INTO persistentModel VALUES (?,?)').run('page:playlist',JSON.stringify({data:{entities:{'88':{id:88,name:'测试歌单',trackCount:2,trackIds:[{id:12345},{id:99999}],tags:[]}},trackEntities:{}}}));db.close();
+ fs.writeFileSync(path.join(dir,'file_storage/webdata/file/playingList'),JSON.stringify({list:[{track:song}]}));
+ let live={running:true,available:true,playing:true,title:'测试曲',artist:'甲'};const source=new MusicSource({root,readNow:async()=>live});
+ assert.equal((await source.snapshot()).id,'12345');live={...live,playing:false};assert.equal((await source.snapshot()).playback_status,'paused');
+ assert.equal(matchTrack({title:'测试曲',artist:'丙'},[track(song)]),null,'a conflicting performer never borrows a queue ID');
+ assert.equal(matchTrack({title:'测试曲',artist:'甲'},[track(song),track({...song,id:67890})]),null,'ambiguous editions stay unidentified');
+ assert.equal(source.playlist({id:'88'}).metadata_count,1);assert.equal(source.playlist({id:'88'}).complete,false);
+ assert.throws(()=>source.song('../../private'),/music_invalid_id/);assert.equal(source.audio('../../private'),null);
+ await assert.rejects(source.publicRead('play',{id:'12345'}),/music_operation_denied/);
+ await assert.rejects(source.publicRead('search',{query:'/Users/private/token'}),/music_operation_denied/);
+ const pcm=Buffer.alloc(8000*4*4);for(let i=0;i<32000;i++)pcm.writeFloatLE(Math.sin(i*Math.PI*2*220/8000)*(i<16000?.1:.5),i*4);
+ const f=features(pcm);assert.equal(f.analyzed_seconds,4);assert.equal(f.tempo_reliable,false);assert.equal(f.instruments,null);assert.ok(f.loudest[0].second>=2);
+ assert.equal((await analyzeAudio(null)).state,'unavailable');
+ const binary=path.join(root,'unknown');fs.writeFileSync(binary,'unknown cache');assert.equal((await analyzeAudio({file:binary})).reason,'cache_format_unrecognized');
+ console.log('music-source: read-only SQLite/queue, exact IDs/performer conflicts, partial playlist coverage, paused state, operation allowlist and honest audio features passed');
+}finally{fs.rmSync(root,{recursive:true,force:true});}})().catch(e=>{console.error(e);process.exitCode=1;});

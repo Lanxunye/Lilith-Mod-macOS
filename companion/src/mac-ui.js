@@ -11,7 +11,7 @@ const ALLOWED = {
     'search_tool', 'timeout_ms', 'temperature', 'max_tokens'],
   network: ['proxy_url', 'provider_dns_servers', 'provider_dns_fallback_enabled'],
   media: ['enabled'], local_context: ['enabled', 'time_enabled', 'media_enabled'],
-  web_search: ['enabled', 'backend', 'base_url', 'api_key', 'timeout_ms', 'max_results', 'cache_ttl_ms'],
+  web_search: ['enabled', 'backend', 'base_url', 'api_key', 'timeout_ms', 'max_results', 'cache_ttl_ms', 'daily_limit'],
   conversation: ['reply_max_chars', 'allow_parenthetical_actions'],
   memory: ['max_messages', 'max_chars_per_message', 'long_term_max_items'],
   music: ['preferred_player'], integrations: ['dsh', 'comfy']
@@ -57,6 +57,7 @@ function safePatch(config, patch) {
   if (next.provider.max_tokens < 1 || next.provider.max_tokens > 32768) throw new Error('invalid_max_tokens');
   if (next.conversation.reply_max_chars < 20 || next.conversation.reply_max_chars > 500)
     throw new Error('invalid_reply_length');
+  if(!Number.isInteger(next.web_search.daily_limit)||next.web_search.daily_limit<1||next.web_search.daily_limit>500)throw new Error('invalid_search_daily_limit');
   const comfy=normalizeIntegrations(next.integrations).comfy;
   if(comfy.cooldown_seconds<0||comfy.cooldown_seconds>3600||comfy.daily_limit<1||comfy.daily_limit>100
     ||comfy.job_timeout_ms<1000||comfy.job_timeout_ms>1800000)throw new Error('invalid_art_limits');
@@ -87,13 +88,13 @@ function createMacUi(host) {
   const integrations = createIntegrations(host.getConfig, host.integrationOptions);
   return {
     publicPage(req, res, url) {
-      if (req.method !== 'GET' || !['/ui/settings', '/ui/chat', '/ui/art', '/ui/qq', '/ui/app.js', '/ui/style.css'].includes(url.pathname)) return false;
-      const file = url.pathname.endsWith('.js') ? 'app.js' : url.pathname.endsWith('.css') ? 'style.css' : 'index.html';
+      if (req.method !== 'GET' || !['/ui/bili','/ui/bili.js','/ui/settings', '/ui/chat', '/ui/art', '/ui/qq', '/ui/app.js', '/ui/style.css'].includes(url.pathname)) return false;
+      const file = url.pathname==='/ui/bili'?'bili.html':url.pathname==='/ui/bili.js'?'bili.js':url.pathname.endsWith('.js') ? 'app.js' : url.pathname.endsWith('.css') ? 'style.css' : 'index.html';
       const body = fs.readFileSync(path.join(__dirname, '../web', file));
       res.writeHead(200, { 'Content-Type': file.endsWith('.js') ? 'text/javascript; charset=utf-8'
         : file.endsWith('.css') ? 'text/css; charset=utf-8' : 'text/html; charset=utf-8',
         'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer',
-        'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' blob:; frame-ancestors 'none'; base-uri 'none'" });
+        'Content-Security-Policy': url.pathname.startsWith('/ui/bili')?"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'":"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' blob:; frame-ancestors 'none'; base-uri 'none'" });
       res.end(body); return true;
     },
     async route(req, res, url) {

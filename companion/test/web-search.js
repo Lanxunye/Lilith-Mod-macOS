@@ -1,0 +1,36 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path');
+const {ConversationStore}=require('../src/conversation-store');
+const {createWebSearch,cleanQuery,publicUrl,validateFetchUrl,candidate}=require('../src/web-search');
+const root=fs.mkdtempSync(path.join(os.tmpdir(),'lilith-search-')),store=new ConversationStore(root);
+let enabled=true,limit=50,time=Date.UTC(2026,9,27,15,59),calls=[],mode='normal',planned=0;
+const rows=[{title:'DeepSeek 官方搜索文档',url:'https://api-docs.deepseek.com/zh-cn/guides/search/',content:'官方 Search 和 Fetch 接口说明',rerank_score:3},{title:'私网',url:'http://127.0.0.1/secret',content:'must not expose',rerank_score:3}];
+const search=createWebSearch({store,getSettings:()=>({enabled,daily_limit:limit}),now:()=>time,sleep:async()=>{},lookup:async()=>[{address:'8.8.8.8'}],plan:async()=>{planned++;return JSON.stringify({search:mode!=='decline',query:'DeepSeek 搜索 文档'});},transport:async(op,p)=>{
+ calls.push({op,p});if(mode==='401')throw Object.assign(Error('hidden credential'),{code:'search_http_401'});if(mode==='429'&&calls.length%2)throw Object.assign(Error('rate'),{code:'search_http_429'});
+ if(mode==='invalid')return {};if(mode==='off'){enabled=false;return {results:rows};}if(op==='fetch')return {content:'网页全文'};
+ return {results:mode==='empty'?[]:mode==='fetch'?[{...rows[0],content:'',summary:'搜索摘要'}]:rows};
+}});
+(async()=>{try{
+ assert.equal(cleanQuery('最新 DeepSeek 文档'), '最新 DeepSeek 文档');assert.equal(cleanQuery('花花 DeepSeek',['花花']),'DeepSeek');
+ assert.equal([...cleanQuery('𠮷'.repeat(128))].length,128);assert.throws(()=>cleanQuery('𠮷'.repeat(129)),/invalid_query/);
+ for(const q of ['sk-this-is-a-secret','账号 １２３４５６７８９','hello@example.com','/Users/private/key','API Key 是多少'])assert.throws(()=>cleanQuery(q),/private_query/);
+ for(const u of ['file:///etc/passwd','http://127.0.0.1/a','https://user:pass@public.example/a','http://[::1]/','https://example.local/a','https://public.example/?token=abc'])assert.throws(()=>publicUrl(u),/denied/);
+ await assert.rejects(validateFetchUrl('https://public.example/a',async()=>[{address:'10.1.1.1'}]),/private_network/);
+ assert.equal(candidate('今天好难过'),false);assert.equal(candidate('查一下本地天气'),false);
+ assert.equal((await search.run({message:'晚上好'})).attempted,false);assert.equal(planned,0);
+ const good=await search.run({message:'查一下 DeepSeek 最新文档'});assert.equal(good.results.length,1);assert.equal(good.state,'completed');assert.equal(calls.length,1);assert.equal(good.results[0].evidence,'page_content');
+ const cached=await search.run({query:'DeepSeek 搜索 文档'});assert.equal(cached.state,'cached');assert.equal(calls.length,1);
+ await search.run({query:'DeepSeek 搜索 文档',channel:'qq',scope:'qq'});assert.equal(calls.length,2,'private cache does not cross channel');
+ mode='fetch';const fetched=await search.run({query:'DeepSeek Fetch'});assert.equal(fetched.results[0].snippet,'网页全文');assert.equal(calls.at(-1).op,'fetch');
+ mode='401';const before=calls.length,failed=await search.run({query:'鉴权测试'});assert.equal(calls.length,before+1);assert.equal(failed.error,'search_http_401');assert.doesNotMatch(JSON.stringify(failed),/hidden credential/);
+ mode='429';calls=[];const retried=await search.run({query:'限速测试'});assert.equal(retried.state,'completed');assert.equal(calls.length,2);
+ mode='empty';assert.equal((await search.run({query:'没有匹配结果'})).state,'no_results');
+ mode='invalid';assert.equal((await search.run({query:'格式错误'})).error,'search_invalid_response');
+ mode='decline';assert.equal((await search.run({message:'查一下我今天难过的原因'})).state,'not_needed');
+ mode='normal';limit=1;await search.run({query:'单群预算',channel:'qq_group',scope:'group-a'});assert.equal((await search.run({query:'第二次',channel:'qq_group',scope:'group-a'})).error,'search_daily_limit');
+ assert.equal((await search.run({query:'单群预算',channel:'qq_group',scope:'group-b'})).state,'completed');
+ time+=120000;assert.equal(search.status('qq_group','group-a').daily_used,0,'midnight reset uses Beijing day');
+ mode='off';assert.equal((await search.run({query:'关闭在途搜索',scope:'off'})).state,'failed');assert.equal((await search.run({query:'禁止出站'})).state,'disabled');
+ assert.equal((await search.run({query:'sk-secret'})).state,'disabled');
+ console.log('web-search: native broker, Unicode/privacy, public URL/DNS restrictions, planning, source provenance, cache isolation, retry, errors, per-group persistent budget and midnight/off-during-flight passed');
+}finally{store.close();fs.rmSync(root,{recursive:true,force:true});}})().catch(e=>{console.error(e);process.exitCode=1;});

@@ -38,7 +38,7 @@ function describeIntegrations(value) {
     dsh: { enabled: Boolean(config.dsh.enabled), transport: config.dsh.transport,
       configured: config.dsh.transport==='stdio'?fs.existsSync(config.dsh.executable):Boolean(config.dsh.endpoint),
       status: config.dsh.transport==='stdio'?'sdk_configured_unverified':config.dsh.endpoint?'configured_unverified':'reserved',
-      description: '独立 SDK 任务会话；莉莉丝派发任务并接收结果。' },
+      description: '桌面与 QQ 共用 DSH 原生对话；独立工作区，删除和高危操作逐次明文确认。' },
     comfy: { enabled: Boolean(config.comfy.enabled), model_label: config.comfy.model_label,
       configured: Boolean(config.comfy.base_url && Object.keys(config.comfy.workflow || {}).length),
       status: Object.keys(config.comfy.workflow || {}).length ? 'configured_unverified' : 'workflow_required' }

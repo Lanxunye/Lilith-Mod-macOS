@@ -122,7 +122,7 @@ async function policyTests() {
   process.env.LILITH_AI_CONFIG = path.join(dataRoot, 'config.json');
   fs.writeFileSync(process.env.LILITH_AI_CONFIG, JSON.stringify({ mock_mode: true, media: { enabled: false } }));
   const { createApp } = require('../src/server');
-  const app = createApp();
+  const app = createApp({chatEngine:'provider-test'});
   await new Promise(resolve => app.server.listen(0, '127.0.0.1', resolve));
   try {
     const reloaded = await fetch(`http://127.0.0.1:${app.server.address().port}/v1/control`, {

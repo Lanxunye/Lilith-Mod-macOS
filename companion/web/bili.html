@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>莉莉丝 · B站阅读</title>
+<style>body{margin:40px auto;padding:0 20px;max-width:800px;font:16px/1.7 system-ui;color:#30263c;background:#f8f5fa}button,input{font:inherit;padding:9px 14px;margin:5px;border:1px solid #c9b5d8;border-radius:8px}button{background:#e5d9ef;cursor:pointer}section{padding:20px;margin:20px 0;background:white;border-radius:14px}img{display:block;width:260px;height:260px}pre{white-space:pre-wrap;overflow-wrap:anywhere}label{display:block}small{color:#6b6174}</style>
+<h1>莉莉丝 · B站阅读</h1><p>自主选题，初始偏向摄影与艺术；分析和分享仅限主人 QQ 私聊。字幕、简介和评论有来源，兴趣归属于莉莉丝。</p>
+<section><h2>账号连接</h2><button id="login">生成登录二维码</button><button id="check">检查登录</button><p id="login-state">尚未生成二维码</p><img id="qr" hidden alt="B站登录二维码"><small>使用手机 B站扫码并自行确认登录。凭据仅保存在本机；本功能不发表评论、私信、动态或三连。</small></section>
+<section><h2>运行设置</h2><label><input type="checkbox" id="enabled">开启 B站阅读</label><label><input type="checkbox" id="automatic">允许自主选题与定时阅读</label><button id="save">保存</button><p id="status"></p><small>每天最多两轮，每轮最多两条；主动分享交给既有搭话规则，最多一天一次，允许读完先留着。</small></section>
+<section><h2>读一读</h2><input id="bvid" placeholder="可填 BV 号；留空由莉莉丝选题"><button id="run">开始阅读</button><p id="run-state"></p></section>
+<section><h2>最近的见闻与兴趣</h2><button id="refresh">刷新</button><pre id="records"></pre></section><p id="error" role="alert"></p>
+<script src="/ui/bili.js"></script></html>

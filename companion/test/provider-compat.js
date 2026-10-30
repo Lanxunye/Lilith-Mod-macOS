@@ -83,7 +83,7 @@ async function runCase(fakePort, requests, searchQueries, testCase) {
 
   const before = requests.length;
   const beforeSearch = searchQueries.length;
-  const app = createApp();
+  const app = createApp({chatEngine:'provider-test'});
   await listen(app.server);
   try {
     const messages = testCase.memorySearch
@@ -108,7 +108,7 @@ async function runCase(fakePort, requests, searchQueries, testCase) {
     assert.strictEqual(response.status, 200);
     assert.strictEqual(response.body.status, 'ok');
     if (testCase.longReply) {
-      assert.ok(Array.from(response.body.text).length <= 100);
+      assert.ok(Array.from(response.body.text).length <= 400);
       assert.ok(/[。！？!?…]$/.test(response.body.text));
       assert.ok(response.body.ui.duration_ms > 6500);
     } else {
@@ -122,7 +122,7 @@ async function runCase(fakePort, requests, searchQueries, testCase) {
     assert.strictEqual(captured.body.model, testCase.model);
     assert.ok(captured.body.messages.some(item => item.role === 'system'
       && item.content.includes('You are Lilith')
-      && item.content.includes('100 Unicode characters')));
+      && item.content.includes('400 Unicode characters')));
     assert.strictEqual(
       captured.body.messages.at(-1).content,
       messages.at(-1));
@@ -235,7 +235,7 @@ async function runResponsesSearchCase(fakePort, requests, testCase) {
   }, null, 2), 'utf8');
 
   const before = requests.length;
-  const app = createApp();
+  const app = createApp({chatEngine:'provider-test'});
   await listen(app.server);
   try {
     const response = await request(
@@ -311,7 +311,7 @@ async function runLocalContextCase(fakePort, requests, searchQueries) {
   };
 
   writeConfig(false);
-  let app = createApp();
+  let app = createApp({chatEngine:'provider-test'});
   await listen(app.server);
   try {
     app.mediaMonitor.state = mediaState;
@@ -367,7 +367,7 @@ async function runLocalContextCase(fakePort, requests, searchQueries) {
   }
 
   writeConfig(true);
-  app = createApp();
+  app = createApp({chatEngine:'provider-test'});
   await listen(app.server);
   try {
     app.mediaMonitor.state = mediaState;
@@ -437,7 +437,7 @@ async function runLocalContextCase(fakePort, requests, searchQueries) {
     },
     web_search: { enabled: true, backend: 'provider' }
   }, null, 2), 'utf8');
-  app = createApp();
+  app = createApp({chatEngine:'provider-test'});
   await listen(app.server);
   try {
     app.mediaMonitor.state = mediaState;

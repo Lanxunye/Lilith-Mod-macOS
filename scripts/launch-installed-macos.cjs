@@ -6,6 +6,7 @@ const path = require('node:path');
 const os = require('node:os');
 const net = require('node:net');
 const { spawn, execFileSync } = require('node:child_process');
+const { ensureServices } = require('./startup-services.cjs');
 
 const game = path.resolve(__dirname, '..');
 const executable = path.join(game, 'Lilith.app/Contents/MacOS/Lilith');
@@ -44,6 +45,11 @@ async function reusableService(root, config) {
 }
 
 async function main() {
+  if (process.argv.includes('--services-only') || process.argv.includes('--check-services')) {
+    const report=await ensureServices({root:data,support:__dirname,checkOnly:process.argv.includes('--check-services'),log:console.log});
+    if(Object.values(report.services).some(s=>['error','unavailable','attention'].includes(s.state)))process.exitCode=1;
+    return;
+  }
   preflight();
   if (process.argv.includes('--check')) {
     console.log('正式游戏 Mod 启动依赖检查通过。');
@@ -70,6 +76,9 @@ async function main() {
     } catch { /* Another launcher must never be unlocked. */ }
   };
   process.once('exit', cleanup);
+  const services=await ensureServices({root:data,support:__dirname,log:console.log});
+  if(Object.values(services.services).some(s=>['error','unavailable','attention'].includes(s.state)))
+    console.log('部分服务需要处理；桌宠仍会启动，详情见数据目录 startup-status.json。');
   // Fail before opening the game if a different service owns the Companion port.
   const config = fs.existsSync(path.join(data, 'config.json'))
     ? JSON.parse(fs.readFileSync(path.join(data, 'config.json'), 'utf8')) : {};

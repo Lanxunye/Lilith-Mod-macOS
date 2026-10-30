@@ -1,0 +1,7 @@
+{
+ "name":"dsh-speak-up","version":"0.2.3-lilith.1","type":"module","main":"index.mjs",
+ "exports":{".":"./index.mjs"},"files":["index.mjs","upstream","cordis.patch.yml","LICENSE","UPSTREAM.json","README.md"],
+ "license":"MIT","dsh":{"bundle":{"patch":"./cordis.patch.yml"}},
+ "lilithAdaptation":{"adaptation":"lilith-speak-sdk.1","upstreamVersion":"0.2.3"},
+ "scripts":{"test":"node --test test.mjs"}
+}

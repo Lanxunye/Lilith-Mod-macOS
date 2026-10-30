@@ -1,0 +1,26 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),os=require('node:os');
+const {visualState,fallbackScene,validateScenePlan,fallbackDirection}=require('../src/art-scene'),{createArtwork,buildArtPrompt}=require('../src/artwork');
+const profile=require('../../character/art-direction.json'),root=fs.mkdtempSync(path.join(os.tmpdir(),'lilith-art-scene-'));
+const action={kind:'illustration',scene:'画一张你睡觉的样子',mood:'gentle'};
+const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC1lEQVR42mP8/x8AAwMCAO+a7gAAAABJRU5ErkJggg==','base64');
+const direction=fallbackDirection(),validPlan=()=>({scene,art_direction:direction,orientation:'square'});
+const scene='Lilith is peacefully asleep, lying on her side in bed, her head on a pillow. Both eyelids are fully closed. A light blanket covers her body, with soft moonlight in a quiet bedroom.';
+(async()=>{try{
+ assert.equal(visualState('穿睡衣看书').sleeping,false);assert.equal(visualState('画你失眠睡不着的样子').sleeping,false);
+ assert.match(fallbackScene({...action,scene:'画你趴在桌上睡觉'}).scene,/folded arms at a desk/);
+ assert.match(fallbackScene({...action,scene:'画你坐着睡着的样子'}).scene,/chair/);
+ const prompt=buildArtPrompt(profile,action);assert.doesNotMatch(prompt,/画一张|Requested situation|pink-red eyes|Soft attentive expression/);assert.match(prompt,/fully closed/);assert.match(prompt,/lying on her side/);assert.match(prompt,/pillow/);
+ assert.equal(validateScenePlan(validPlan(),action).source,'native_dsh');
+ for(const bad of ['画一张你睡觉的样子','A drawing with a caption reading sleep now.','Lilith sits upright and looks directly at the viewer.'])assert.throws(()=>validateScenePlan({scene:bad},action),/art_scene/);
+ let submitted=[],planCalls=0,mode='valid',held,continueAllowed=true;
+ const cfg={integrations:{comfy:{enabled:true,base_url:'http://127.0.0.1:1',daily_limit:20,workflow:{'1':{class_type:'CLIPTextEncode',inputs:{text:''}}},prompt_node_id:'1',prompt_input:'text'}}};
+ const service=createArtwork({dataRoot:root,getConfig:()=>cfg,scenePlanner:async input=>{planCalls++;assert.equal(input.scene,action.scene);if(mode==='hold')await new Promise(r=>held=r);if(mode==='fail')throw Error('Bearer private-secret-must-not-be-recorded');return {...validPlan(),scene:mode==='bad'?'A title with the original words in the picture.':scene};},integration:{submitImage:async({workflow})=>{submitted.push(workflow);return {job_id:'mock'};},imageStatus:async()=>({status:'completed',images:[{filename:'x.png',type:'output'}]})},fetch:async()=>new Response(png)});
+ let job=service.submit(action,{requestId:'once'});await service.wait(job.id);let done=service.get(job.id);assert.equal(done.scene_plan.source,'native_dsh');assert.equal(submitted.length,1);assert.doesNotMatch(submitted[0]['1'].inputs.text,/画一张你睡觉的样子/);assert.match(submitted[0]['1'].inputs.text,/Both eyelids are fully closed/);
+ assert.equal(service.submit(action,{requestId:'once'}).id,job.id);assert.equal(planCalls,1,'HTTP retry does not replan or regenerate');
+ mode='bad';job=service.submit(action);await service.wait(job.id);assert.equal(service.get(job.id).scene_plan.source,'deterministic_fallback');assert.match(service.get(job.id).final_prompt,/lying on her side/);
+ mode='fail';job=service.submit(action);await service.wait(job.id);done=service.get(job.id);assert.equal(done.scene_planner_error,'art_scene_planner_failed');assert.doesNotMatch(JSON.stringify(done),/private-secret/);assert.equal(done.status,'completed');
+ mode='hold';const before=submitted.length;job=service.submit(action,{source:'qq_group',authorizeGroup:()=>true,canContinue:()=>continueAllowed});for(let n=0;n<100&&!held;n++)await new Promise(r=>setTimeout(r,1));assert.ok(held);continueAllowed=false;held();await service.wait(job.id);assert.equal(submitted.length,before);assert.equal(service.get(job.id).error,'art_cancelled_before_render');
+ held=null;continueAllowed=true;job=service.submit(action);for(let n=0;n<100&&!held;n++)await new Promise(r=>setTimeout(r,1));service.close();held();await service.wait(job.id);assert.equal(submitted.length,before,'shutdown during scene planning cannot start GPU work');
+ console.log('art-scene: concrete sleep pose/closed eyes, no raw command lettering, native plan validation, fallback, idempotency, secret-free errors and cancellation before GPU submission passed');
+}finally{fs.rmSync(root,{recursive:true,force:true});}})().catch(e=>{console.error(e);process.exitCode=1;});

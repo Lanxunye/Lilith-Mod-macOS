@@ -34,6 +34,11 @@ const root=fs.mkdtempSync(path.join(os.tmpdir(),'lilith-art-'));
   assert.equal(await service.maybeGenerate({kind:'none'}),null);
   cfg.integrations.comfy.autonomous_enabled=false;assert.equal(await service.maybeGenerate({kind:'sticker',scene:'再来一张'}),null);
   cfg.integrations.comfy.daily_limit=1;assert.throws(()=>service.submit({kind:'sticker',scene:'新图'}),/art_daily_limit/);
+  assert.throws(()=>service.submit({kind:'illustration',scene:'群图'},{source:'qq_group'}),/art_group_authorization_required/);
+  assert.throws(()=>service.submit({kind:'illustration',scene:'群图'},{source:'qq_group',authorizeGroup:()=>false}),/art_group_authorization_required/);
+  const groupJob=service.submit({kind:'illustration',scene:'群里一起看花'},{source:'qq_group',authorizeGroup:()=>true});await service.wait(groupJob.id);assert.equal(service.get(groupJob.id).status,'completed','authorized per-group quota is independent of desktop quota');
+  assert.throws(()=>service.submit({kind:'illustration',scene:'私聊新图'},{source:'qq_private'}),/art_private_authorization_required/);
+  const privateJob=service.submit({kind:'illustration',scene:'私聊里请求的花园插画'},{source:'qq_private',authorizePrivate:()=>true});await service.wait(privateJob.id);assert.equal(service.get(privateJob.id).status,'completed','owner-private drawing is independent of the twenty-image desktop quota');
   cfg.integrations.comfy.daily_limit=20;cfg.integrations.comfy.workflow={...workflow,x:{class_type:'PaidRemoteImageAPI',inputs:{}}};
   assert.throws(()=>service.submit({kind:'sticker',scene:'新图'}),/local_core_workflow_required/);
   cfg.integrations.comfy.workflow=workflow;fail=true;
@@ -63,6 +68,9 @@ const root=fs.mkdtempSync(path.join(os.tmpdir(),'lilith-art-'));
   assert.equal(resumed.chatStickers(sessionId)[0].sticker.id,sticker.id);
   resumed.resetChat(sessionId);assert.equal(resumed.chatStickers(sessionId).length,0,'Reset hides prior image messages');
   assert.equal(resumed.beginChatTurn(sessionId,'new-1').turn,1);
+  cfg.integrations.comfy.daily_limit=1;
+  for(let n=0;n<105;n++){const id=require('node:crypto').randomUUID();fs.writeFileSync(path.join(root,'artwork',id+'.json'),JSON.stringify({id,source:'qq_private',status:'completed',created_at:new Date(Date.now()+1000+n).toISOString()}));}
+  assert.throws(()=>service.submit({kind:'illustration',scene:'桌面新图'}),/art_daily_limit/,'unlimited private history cannot hide older desktop quota entries behind the UI limit');
   console.log('artwork: local-only workflow, fixed character rules, queue, idempotency, captions, limits, persisted PNG and failure contracts passed.');
  }finally{await new Promise(r=>fake.close(r));fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});

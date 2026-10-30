@@ -150,7 +150,7 @@ async function main() {
   }
   await close(failureServer);
 
-  const app = createApp({
+  const app = createApp({chatEngine:'provider-test',
     releaseInfo: { version: '0.3.2', github_repository: repository },
     updateApiRoot: 'http://github-update.test',
     updateTimeoutMs: 1000

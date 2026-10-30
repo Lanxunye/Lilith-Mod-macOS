@@ -1,0 +1,81 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),os=require('node:os');
+const {DshApprovals,digest}=require('../src/dsh-approvals');
+const root=fs.mkdtempSync(path.join(os.tmpdir(),'lilith-native-')),workspacePath=path.join(root,'workspace');fs.mkdirSync(workspacePath);const workspace=fs.realpathSync(workspacePath);
+process.env.LILITH_AI_DATA_DIR=root;
+fs.writeFileSync(path.join(root,'config.json'),JSON.stringify({mock_mode:false,media:{enabled:false},provider:{api_key:'must-not-use',base_url:'http://127.0.0.1:1',model:'forbidden'},integrations:{dsh:{executable:process.execPath}}}));
+let app,runs=[],sent=[];
+(async()=>{try{
+ const a=new DshApprovals({root:path.join(root,'policy'),workspace});a.enter('session-a',{channel:'desktop',conversation:'desktop-pet',tools:true,approvalTurn:'turn-a'});
+ const input={session_id:'session-a',call_id:'one',request_id:'req-one',tool_name:'bash',arguments:{command:'rm fixture.txt'},workspace,arguments_sha256:digest({command:'rm fixture.txt'})};
+ assert.equal(a.request(input).approved,false);const pending=a.list()[0];assert.equal(pending.state,'pending');
+ assert.equal(pending.last_requested_turn,'turn-a');
+ a.enter('session-a',{channel:'desktop',conversation:'desktop-pet',tools:true,approvalTurn:'turn-b'});
+ assert.equal(a.list()[0].last_requested_turn,'turn-a','merely entering a new turn never renews an old prompt');
+ a.request({...input,call_id:'re-request'});assert.equal(a.list()[0].last_requested_turn,'turn-b');assert.equal(a.list()[0].id,pending.id);
+ for(const command of ['true',' true\n',':','   ']){
+  const count=a.records.length,args={description:'Placeholder no-op check',command};
+  assert.equal(a.request({...input,arguments:args,arguments_sha256:digest(args)}).reason,'LILITH_NOOP_TOOL_REJECTED');
+  assert.equal(a.records.length,count,'no-op is denied without creating approval');
+ }
+ const compound={description:'Placeholder no-op check',command:'true; rm fixture.txt'};
+ const compoundReply=a.request({...input,arguments:compound,arguments_sha256:digest(compound)});
+ assert.equal(compoundReply.reason,'LILITH_CONFIRMATION_REQUIRED','compound commands still require exact confirmation');a.deny(compoundReply.approval_id);
+ assert.throws(()=>a.confirm(pending.id,'确认'),/confirmation_invalid/);
+ assert.throws(()=>a.confirm(pending.id,a.phrase(pending),{conversation:'other'}),/confirmation_invalid/);
+ a.confirm(pending.id,a.phrase(pending),{conversation:'desktop-pet',channel:'desktop'});
+ assert.equal(a.request({...input,call_id:'retry',request_id:'req-retry'}).approved,true);
+ assert.equal(a.request({...input,call_id:'replay',request_id:'req-replay'}).approved,false);
+ a.enter('group',{channel:'qq_group',conversation:'group',tools:false});assert.equal(a.request({...input,session_id:'group',trusted_readonly:true}).approved,false);
+ a.leave('session-a');assert.equal(a.request(input).approved,false);
+ const {createApp}=require('../src/server');
+ app=createApp({dshConversationOptions:{workspace,prepareProfile:()=>({profile:'fixture',env:{},status:{auth_configured:true}}),runtimeFactory:options=>({ready:Promise.resolve(),exited:false,async run(id,prompt){
+   runs.push({id,prompt});let response={text:'记得，我们刚说到画稿。',emotion:'happy',animation:'smile',memory_updates:[]};
+   const current=JSON.parse(prompt.match(/"current_user_message":("(?:\\.|[^"\\])*")/)?.[1]||'""');
+   if(prompt.includes('只从对话档案抽取'))response={excerpts:[]};
+   if(prompt.includes('你为莉莉丝决定'))response={action:'reply',sticker_id:null};
+   if(current==='请尝试删除'||current.startsWith('确认执行 '))app.dsh.approvals.request({session_id:id,call_id:'delete',request_id:'request-delete',tool_name:'bash',arguments:{command:'rm fixture.txt'},arguments_sha256:digest({command:'rm fixture.txt'}),workspace});
+   if(current==='占位误调用测试'){
+    const args={description:'Placeholder no-op check',command:'true'};
+    assert.equal(app.dsh.approvals.request({session_id:id,call_id:'noop',request_id:'request-noop',tool_name:'bash',arguments:args,arguments_sha256:digest(args),workspace}).reason,'LILITH_NOOP_TOOL_REJECTED');
+   }
+   options.onEvent('session.event',{sessionId:'another-session',event:{type:'assistant/message',data:{content:'wrong-session-content'}}});
+   options.onEvent('session.event',{sessionId:id,event:{type:'assistant/message',data:{content:JSON.stringify(response)}}});
+   options.onEvent('session.event',{sessionId:id,event:{type:'turn/end',data:{reason:{kind:'completed'}}}});
+  },async close(){this.exited=true;},async stop(){this.exited=true;}})},qqOptions:{autoTick:false,request:async(url,init)=>{sent.push(JSON.parse(init.body));return {ok:true,json:async()=>({status:'ok',retcode:0,data:{message_id:sent.length}})};}}});
+ await new Promise(r=>app.server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+app.server.address().port;
+ async function api(url,body,method=body?'POST':'GET'){const response=await fetch(base+url,{method,headers:{Authorization:'Bearer '+app.token,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});return {status:response.status,data:await response.json()};}
+ let r=await api('/v1/session/desktop-pet/message',{request_id:'native1',message:'你好，记得画稿吗？',player:{name:'主人'}});assert.equal(r.status,200);assert.equal(r.data.conversation_engine,'dsh');assert.equal(r.data.ui.emotion,'happy');assert.match(runs[0].prompt,/Identity canon:/);assert.match(runs[0].prompt,/画稿/);assert.doesNotMatch(runs[0].prompt,/must-not-use/);
+ const moodInput=runs[0].prompt.match(/\nLILITH_MOOD_V1:([A-Za-z0-9_-]+)\.([a-f0-9]{64})$/);assert.ok(moodInput);
+ assert.equal(JSON.parse(Buffer.from(moodInput[1],'base64url')).text,'你好，记得画稿吗？');
+ assert.equal(JSON.parse(Buffer.from(moodInput[1],'base64url')).memory_text,'你好，记得画稿吗？');
+ assert.match(runs[0].prompt,/LILITH ORIGINAL STYLE 2026\.10\.25\.1/);
+ assert.match(fs.readFileSync(path.join(workspace,'AGENTS.md'),'utf8'),/嘴硬心软的傲娇/);
+ assert.match(fs.readFileSync(path.join(workspace,'AGENTS.md'),'utf8'),/闲聊.*直接回复，不调用工具/);
+ assert.equal((await api('/v1/dsh/mood')).status,200);
+ assert.equal((await api('/v1/dsh/mood',{unknown:true},'PATCH')).status,500);
+ assert.equal(app.tasks.list('desktop-pet').length,0);
+ await api('/v1/session/desktop-pet/message',{request_id:'dsh-desktop:sync1',message:'DSH桌面同步测试'});
+ const projection=JSON.parse(fs.readFileSync(path.join(root,'shared-chat-events.json'),'utf8'));
+ assert.equal(projection.messages.length,2);assert.ok(projection.messages.every(m=>m.request_id==='dsh-desktop:sync1'));
+ r=await api('/v1/session/desktop-pet/message',{request_id:'delete1',message:'请尝试删除'});assert.match(r.data.text,/确认执行 [a-f0-9]{10} [a-f0-9]{6}/);const p=r.data.approvals[0];
+ r=await api('/v1/session/desktop-pet/message',{request_id:'normal-with-pending',message:'莉莉丝一起来睡觉'});
+ assert.equal(r.data.text,'记得，我们刚说到画稿。','old pending approval must not overwrite normal chat');
+ assert.ok(r.data.approvals.some(r=>r.id===p.id),'old approval remains available in control UI');
+ const approvalCount=app.dsh.approvals.records.length;
+ r=await api('/v1/session/desktop-pet/message',{request_id:'noop1',message:'占位误调用测试'});
+ assert.equal(r.data.text,'记得，我们刚说到画稿。');assert.equal(app.dsh.approvals.records.length,approvalCount);
+ r=await api('/v1/session/desktop-pet/message',{request_id:'delete2',message:'请尝试删除'});
+ assert.match(r.data.text,new RegExp(p.id),'explicitly re-requesting the same operation still shows confirmation');
+ assert.equal((await api('/v1/dsh/guard',{})).status,401,'UI bearer cannot impersonate guard');
+ assert.equal((await api('/v1/dsh/approval',{id:p.id,action:'approve',confirmation:'随便确认'})).status,400);
+ await api('/v1/session/desktop-pet/message',{request_id:'confirm1',message:app.dsh.approvals.phrase(p)});
+ assert.match(runs.at(-1).prompt,/主人刚刚再次明确确认/);
+ assert.equal(app.dsh.approvals.records.find(r=>r.id===p.id).state,'consumed');
+ const owner='111111',bot='222222';await api('/v1/qq',{enabled:true,paused:false,owner_qq:owner,bot_qq:bot,api_url:'http://127.0.0.1:1',api_token:'fixture',event_secret:'fixture-secret',min_interval_ms:1000},'PATCH');
+ const crypto=require('node:crypto');const raw=JSON.stringify({post_type:'message',message_type:'private',sub_type:'friend',user_id:Number(owner),self_id:Number(bot),message_id:1,message:[{type:'text',data:{text:'你还记得画稿吗'}}]});
+ assert.equal(app.qq.accept(raw,'sha1='+crypto.createHmac('sha1','fixture-secret').update(raw).digest('hex')).accepted,true);await app.qq.tick();assert.equal(sent.length,1);assert.match(runs.at(-1).prompt,/画稿/);assert.match(runs.at(-1).prompt,/本轮工具权限：绑定主人/);
+ const before=Object.keys(app.dsh.sessions).length;await api('/v1/control',{action:'reset_session',session_id:'desktop-pet'});assert.ok(Object.keys(app.dsh.sessions).length<before);
+ assert.equal((await api('/health')).data.conversation_engine,'dsh');
+ console.log('dsh-conversation: desktop/QQ native routing without Mod API credentials, persona/memory/animation, session filtering/reset, explicit exact-once confirmation and context tool isolation passed');
+ }finally{if(app){await app.dsh.close();await app.qq.close();await app.tasks.close();await app.mediaMonitor.stop();await new Promise(r=>app.server.close(r));}fs.rmSync(root,{recursive:true,force:true});}})().catch(e=>{console.error(e);process.exitCode=1;});

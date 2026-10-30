@@ -9,7 +9,7 @@ let app,fake,runs=0,providerCalls=0,prompt='';
     res.setHeader('Content-Type','application/json');res.end(JSON.stringify({choices:[{message:{content:JSON.stringify({text:task?'我来处理。':'我在这里陪你。',emotion:'happy',animation:'idle',memory_updates:[],...(task?{task_action:{kind:'delegate',goal:'生成用户请求的报告'}}:{})})}}]}));});
   await new Promise(r=>fake.listen(0,'127.0.0.1',r));
   fs.writeFileSync(process.env.LILITH_AI_CONFIG,JSON.stringify({mock_mode:false,media:{enabled:false},provider:{kind:'deepseek',api_key:'fake',model:'fake',base_url:`http://127.0.0.1:${fake.address().port}`},integrations:{dsh:{enabled:true,transport:'stdio',executable:process.execPath}}}));
-  app=require('../src/server').createApp({taskOptions:{runtimeFactory:o=>({ready:Promise.resolve(),async run(id){runs++;
+  app=require('../src/server').createApp({chatEngine:'provider-test',taskOptions:{runtimeFactory:o=>({ready:Promise.resolve(),async run(id){runs++;
     o.onEvent('session.event',{sessionId:id,event:{type:'assistant/message',data:{content:[{type:'text',text:'实际任务已完成'}]}}});
     o.onEvent('session.event',{sessionId:id,event:{type:'turn/end',data:{reason:{kind:'completed'}}}});},async close(){},async stop(){}})}});
   await new Promise(r=>app.server.listen(0,'127.0.0.1',r));const base=`http://127.0.0.1:${app.server.address().port}`;

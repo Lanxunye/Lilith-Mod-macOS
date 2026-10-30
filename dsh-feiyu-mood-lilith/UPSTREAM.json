@@ -1,0 +1,12 @@
+{
+  "repository": "https://github.com/Yuuyuko-uu/dsh-feiyu-mood",
+  "version": "0.7.0",
+  "commit": "55e1fe89702eac86609a6f76065f5489ced33263",
+  "files": {
+    "lib/index.js": "dae8132695b44b137a835d2deb8adb23a2a882c0",
+    "lib/selfupdate.mjs": "83b72a97b914726fe2dff50ba03f5ce5e204dbec",
+    "README.md": "efdc4a246e479a20fd5a0c258325d727e308fcc2",
+    "LICENSE": "8b408bd06906ef550afb3ead58b53df1952e1d72"
+  },
+  "adaptation": "lilith-sdk.1"
+}

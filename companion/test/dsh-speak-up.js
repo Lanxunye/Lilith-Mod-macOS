@@ -1,0 +1,56 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path');
+const {pathToFileURL}=require('node:url');
+const root=fs.mkdtempSync(path.join(os.tmpdir(),'lilith-speak-host-'));process.env.LILITH_AI_DATA_DIR=root;
+let app,release,started,qqOffset=0;const runs=[],sends=[];
+(async()=>{try{
+ fs.writeFileSync(path.join(root,'config.json'),JSON.stringify({mock_mode:false,media:{enabled:false},integrations:{dsh:{executable:process.execPath}}}));
+ const home=path.join(root,'dsh-lilith/home'),pkg=path.join(home,'profiles/lilith/node_modules/dsh-speak-up');fs.mkdirSync(pkg,{recursive:true});
+ fs.writeFileSync(path.join(pkg,'package.json'),JSON.stringify({lilithAdaptation:{adaptation:'lilith-speak-sdk.1'}}));
+ fs.mkdirSync(path.join(home,'speak-up'));fs.writeFileSync(path.join(home,'speak-up/lilith-status.json'),JSON.stringify({version:'0.2.3-lilith.1',loaded:true,pid:process.pid}));
+ const {createApp}=require('../src/server');
+ app=createApp({dshConversationOptions:{workspace:path.join(root,'workspace'),prepareProfile:()=>({profile:'fixture',env:{},status:{}}),runtimeFactory:o=>({ready:Promise.resolve(),exited:false,child:{pid:process.pid},openedSessions:new Set(),async run(id,prompt){
+  this.openedSessions.add(id);runs.push(prompt);
+  if(prompt.includes('\nLILITH_PROACTIVE_V1:')&&started){started();await new Promise(r=>{release=r;});started=null;}
+  o.onEvent('session.event',{sessionId:id,event:{type:'assistant/message',data:{content:JSON.stringify({text:prompt.includes('\nLILITH_PROACTIVE_V1:')?'哼，突然想和你说句话。\n原视频：https://www.bilibili.com/video/BV1234567890':'嗯，记着呢。',emotion:'happy',memory_updates:[]})}}});
+  o.onEvent('session.event',{sessionId:id,event:{type:'turn/end',data:{reason:{kind:'completed'}}}});
+ },async close(){this.exited=true;}})},speakUpOptions:{autoTick:false,random:()=>0,loadEngine:()=>import(pathToFileURL(path.resolve(__dirname,'../../dsh-speak-up-lilith/index.mjs')).href)},qqOptions:{autoTick:false,now:()=>new Date(Date.now()+qqOffset),request:async(url,init)=>{
+  if(url.endsWith('/get_login_info'))return {ok:true,json:async()=>({status:'ok',retcode:0,data:{user_id:222222}})};
+  sends.push(JSON.parse(init.body));return {ok:true,json:async()=>({status:'ok',retcode:0,data:{message_id:sends.length}})};
+ }}});
+ await new Promise(r=>app.server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+app.server.address().port;
+ const api=async(route,body,method=body?'POST':'GET')=>{const r=await fetch(base+route,{method,headers:{Authorization:'Bearer '+app.token,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,data:await r.json()};};
+ assert.equal((await fetch(base+'/v1/dsh/speak-up')).status,401);
+ await api('/v1/session/desktop-pet/message',{request_id:'seed',message:'今天聊过柠檬红茶。'});
+ await api('/v1/qq',{enabled:true,paused:false,owner_qq:'111111',bot_qq:'222222',api_url:'http://127.0.0.1:1',api_token:'fixture',event_secret:'fixture-secret',group_enabled:true,group_ids:['444444'],min_interval_ms:1000},'PATCH');
+ const qqBefore=JSON.parse(fs.readFileSync(path.join(root,'qq.json')));
+ await api('/v1/dsh/speak-up',{dry_run:false,quiet_start:0,quiet_end:0,min_idle_minutes:1,peak_percent:100,offpeak_percent:100,interval_minutes:1},'PATCH');
+ assert.equal((await api('/v1/dsh/speak-up',{daily_limit:0},'PATCH')).status,400);
+ const due=()=>{app.store.db.prepare('UPDATE messages SET created_at=?').run(new Date(Date.now()-3600000).toISOString());app.speakUp.state.next_check_at=0;app.speakUp.state.last_attempt_at=0;};due();
+ const before=JSON.stringify(app.speakUp.state),count=runs.length;
+ assert.equal((await api('/v1/dsh/speak-up/preview',{})).data.eligible,true);assert.equal(runs.length,count);assert.equal(JSON.stringify(app.speakUp.state),before);
+ assert.equal((await app.speakUp.tick()).committed,true);assert.equal(runs.length,count+1);
+ const prompt=runs.at(-1);assert.match(prompt,/LILITH_PROACTIVE_V1:/);assert.doesNotMatch(prompt,/"current_user_message"/);assert.match(prompt,/禁止任何工具调用/);
+ const rows=app.store.recent('desktop-pet');assert.equal(rows.length,3);assert.equal(rows.filter(r=>r.role==='user').length,1);assert.equal(rows.at(-1).channel,'proactive');
+ assert.ok(!rows.at(-1).content.includes('bilibili.com'),'proactive replies do not inherit permission to attach video links');
+ assert.equal(JSON.parse(fs.readFileSync(path.join(root,'shared-chat-events.json'))).messages.at(-1).content,rows.at(-1).content);
+ const out=app.store.db.prepare("SELECT * FROM outbox WHERE request_id LIKE 'speak-up:%'").get();assert.equal(out.target,'111111');
+ assert.equal(app.store.commitProactive('desktop-pet',out.request_id.slice(9),{text:'duplicate'},'fixture','111111'),false);
+ await app.qq.tick();assert.equal(sends.length,1);assert.equal(sends[0].user_id,'111111');assert.equal(sends[0].message[0].data.text,rows.at(-1).content);
+ await app.qq.tick();assert.equal(sends.length,1,'delivery is not replayed');due();assert.equal((await app.speakUp.tick()).result,'awaiting_owner');
+ await api('/v1/session/desktop-pet/message',{request_id:'new-owner',message:'继续聊吧。'});due();
+ const countBefore=app.store.recent('desktop-pet').length;
+ const began=new Promise(r=>{started=r;});const opening=app.speakUp.tick();await began;
+ const ownerSignal=app.speakUp.environment().owner_signal;
+ const incoming=api('/v1/session/desktop-pet/message',{request_id:'racing-owner',message:'刚好有话要说。'});
+ for(let n=0;n<100&&app.speakUp.environment().owner_signal===ownerSignal;n++)await new Promise(r=>setTimeout(r,5));
+ assert.notEqual(app.speakUp.environment().owner_signal,ownerSignal);release();assert.equal((await opening).committed,false);assert.equal((await incoming).status,200);
+ assert.equal(app.store.recent('desktop-pet').length,countBefore+2,'cancelled generation creates neither fake owner nor assistant row');
+ assert.equal(app.store.db.prepare("SELECT COUNT(*) AS n FROM outbox WHERE request_id LIKE 'speak-up:%'").get().n,1);
+ due();assert.equal((await app.speakUp.tick()).committed,true);
+ await api('/v1/dsh/speak-up',{enabled:false},'PATCH');
+ app.store.db.exec("UPDATE outbox SET state='cancelled' WHERE state='pending' AND request_id NOT LIKE 'speak-up:%'");qqOffset+=2000;await app.qq.tick();
+ assert.equal(app.store.db.prepare("SELECT state FROM outbox WHERE request_id LIKE 'speak-up:%' ORDER BY rowid DESC LIMIT 1").get().state,'cancelled');assert.equal(sends.length,1);
+ assert.deepEqual(JSON.parse(fs.readFileSync(path.join(root,'qq.json'))),qqBefore,'group and QQ rules remain unchanged');
+ console.log('dsh-speak-up: authenticated controls, zero-call preview, single generation shared desktop/owner QQ, signed self origin, exact-once delivery, owner race cancellation and revoked queue passed (local fixtures only)');
+}finally{if(app){await app.speakUp?.close();await app.dsh.close();await app.qq.close();await app.tasks.close();await app.mediaMonitor.stop();await new Promise(r=>app.server.close(r));}fs.rmSync(root,{recursive:true,force:true});}})().catch(e=>{console.error(e);process.exitCode=1;});

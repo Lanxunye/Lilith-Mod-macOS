@@ -192,7 +192,7 @@ async function main() {
     proxyEnvironment
   } = require('../src/server');
   const opened = [];
-  const app = createApp({ openGrounding: url => opened.push(url), groundingTtlMs: 500 });
+  const app = createApp({chatEngine:'provider-test', openGrounding: url => opened.push(url), groundingTtlMs: 500 });
   await listen(app.server);
   try {
     let messageSequence=0;
@@ -297,7 +297,7 @@ async function main() {
       web_search: { enabled: false, backend: 'off' }
     }), 'utf8');
     const runProxyCase = async session => {
-      const proxyApp = createApp({ openGrounding: () => {} });
+      const proxyApp = createApp({chatEngine:'provider-test', openGrounding: () => {} });
       await listen(proxyApp.server);
       try {
         const response = await post(

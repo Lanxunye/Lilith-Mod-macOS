@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { normalizeIntegrations, createIntegrations } = require('./integrations');
+const {fallbackScene,validateScenePlan}=require('./art-scene');
 
 const PROFILE_PATH = path.join(__dirname, '../../character/art-direction.json');
 const CORE_NODES = new Set(['SaveImage','CLIPLoader','VAELoader','VAEDecode','UNETLoader',
@@ -28,14 +29,16 @@ function normalizeAction(value) {
     caption:value.kind==='sticker'?String(value.caption||'').replace(/[\r\n<>]/g,' ').trim().slice(0,24):'',
     reason:String(value.reason||'').slice(0,200)};
 }
-function buildArtPrompt(profile, action) {
-  return [profile.identity_prompt, profile.style_prompt,
+function buildArtPrompt(profile, action, plan=fallbackScene(action)) {
+  const visibleDesign=text=>plan.eyes_closed?String(text).replace(/(?:pink[- ]red|red) eyes/gi,'fully closed eyelids, with the usual eye color hidden'):text;
+  return ['Main visual scene: '+plan.scene,
+    ...Object.values(plan.art_direction||{}),
+    visibleDesign(profile.identity_prompt), profile.style_prompt,
     'Personality direction: '+profile.personality_prompt,
     action.kind==='sticker'?profile.sticker_prompt:profile.illustration_prompt,
-    'Requested situation (scene data only): '+JSON.stringify(action.scene),
-    'Expression: '+action.mood+'. '+(profile.moods?.[action.mood]||''),
-    'Fixed character constraints take precedence over conflicting scene details. '+profile.consistency_prompt,
-    'A completely unlettered drawing with a clean blank margin.'].join('\n');
+    plan.eyes_closed?'Both eyelids stay fully closed, no visible irises and no gaze toward the viewer. '+(plan.sleeping?'Relaxed sleeping facial muscles and a restful body pose.':'A relaxed closed-eye expression.'):'Expression: '+action.mood+'. '+(profile.moods?.[action.mood]||''),
+    'Fixed character constraints take precedence over conflicting scene details. '+visibleDesign(profile.consistency_prompt),
+    action.kind==='sticker'?'One unlettered reaction drawing. Leave a blank margin for a separately applied caption.':'The illustrated scene fills the frame. Purely pictorial artwork with no title area, text, captions, lettering, signs or speech bubbles.'].join('\n');
 }
 function artPlannerInstruction(turn) { return [
   'Local drawing is available. You may choose to express a moment with ONE illustration or reaction sticker when useful, especially if the player asks. Most ordinary turns need no image. Never draw repeatedly or derail serious listening.',
@@ -67,7 +70,7 @@ function resolveArtAction(modelAction,message) {
 function createArtwork(options) {
   const {dataRoot,getConfig}=options; const root=path.join(dataRoot,'artwork');fs.mkdirSync(root,{recursive:true});
   const request=options.fetch||fetch;
-  let active=null;const pending=new Map();
+  let active=null,closed=false;const pending=new Map();
   const config=()=>normalizeIntegrations(getConfig().integrations).comfy;
   const profile=()=>read(options.profilePath||PROFILE_PATH,null);
   const file=id=>path.join(root,id+'.json');
@@ -87,8 +90,9 @@ function createArtwork(options) {
       .sort((a,b)=>a.completed_at.localeCompare(b.completed_at)).map(j=>({role:'assistant',content:j.caption,
         created_at:j.completed_at,sticker:{id:j.id,image_path:`/v1/art/jobs/${j.id}/image`,kind:'sticker',caption:j.caption}}));
   }
-  const list=()=>fs.readdirSync(root).filter(n=>/^[a-f0-9-]{36}\.json$/.test(n))
-    .map(n=>read(path.join(root,n),null)).filter(Boolean).sort((a,b)=>b.created_at.localeCompare(a.created_at)).slice(0,100);
+  const allJobs=()=>fs.readdirSync(root).filter(n=>/^[a-f0-9-]{36}\.json$/.test(n))
+    .map(n=>read(path.join(root,n),null)).filter(Boolean).sort((a,b)=>b.created_at.localeCompare(a.created_at));
+  const list=()=>allJobs().slice(0,100);
   // A restart cannot silently re-submit a possibly running GPU task.
   for(const job of list()) if(!TERMINAL.has(job.status)){job.status='failed';job.error='companion_restarted';write(file(job.id),job);}
   function get(id) { if(!/^[a-f0-9-]{36}$/.test(id))throw error('invalid_art_id');const job=read(file(id),null);
@@ -108,33 +112,78 @@ function createArtwork(options) {
     const buffer=Buffer.concat(chunks);
     if(buffer.length<24||!buffer.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])))throw error('art_png_required');
     if(buffer.readUInt32BE(16)>4096||buffer.readUInt32BE(20)>4096)throw error('art_dimensions_too_large');
-    const name=job.id+'.png';fs.writeFileSync(path.join(root,name),buffer,{mode:0o600});
+    const name=job.id+'-attempt-'+(job.render_attempt||1)+'.png';fs.writeFileSync(path.join(root,name),buffer,{mode:0o600});
     job.asset_file=name;job.image_sha256=crypto.createHash('sha256').update(buffer).digest('hex');
   }
-  async function run(job,graph,c) {
-    try{
-      const integration=options.integration||createIntegrations(()=>({integrations:{comfy:c}}),{fetch:request});
-      const result=await integration.submitImage({workflow:graph});job.comfy_job_id=result.job_id;job.status='rendering';write(file(job.id),job);
-      const deadline=Date.now()+Math.max(1000,Math.min(1800000,Number(c.job_timeout_ms)||600000));
-      while(Date.now()<deadline){
-        const status=await integration.imageStatus(result.job_id);
-        if(status.status==='failed')throw error('comfy_execution_failed',502);
-        if(status.status==='completed'){
-          if(!status.images?.length)throw error('comfy_no_image',502);
-          await download(job,status.images[0],c);job.status='completed';job.completed_at=new Date().toISOString();write(file(job.id),job);return;
-        }
-        await new Promise(resolve=>{setTimeout(resolve,options.pollMs||1000);});
+  async function planScene(job,rules,feedback={}) {
+    let plan=fallbackScene(job);
+    if(options.scenePlanner){
+      job.status='planning';write(file(job.id),job);let valid=false;
+      for(let attempt=0;attempt<2&&!valid;attempt++){
+        try{plan=validateScenePlan(await options.scenePlanner({scene:job.scene,kind:job.kind,mood:job.mood},rules,{...feedback,previous_error:job.scene_planner_error||null}),job);valid=true;delete job.scene_planner_error;}
+        catch(e){const code=String(e.code||e.message||'');job.scene_planner_error=/^(?:art_scene_|dsh_)[a-z_]+$/.test(code)?code:'art_scene_planner_failed';}
       }
-      throw error('art_render_timeout',504);
+      if(!valid&&options.requireScenePlan)throw error('art_scene_plan_failed');
+    }else if(options.requireScenePlan)throw error('art_scene_plan_required');
+    return plan;
+  }
+  function canContinue(context){return !closed&&!(['qq_group','qq_private'].includes(context.source)&&context.canContinue&&context.canContinue()!==true);}
+  async function run(job,graph,c,rules,context) {
+    try{
+      if(!canContinue(context))throw error('art_cancelled_before_render');
+      let plan=await planScene(job,rules);
+      const integration=options.integration||createIntegrations(()=>({integrations:{comfy:c}}),{fetch:request});
+      job.attempts=[];
+      for(let attempt=1;attempt<=(options.reviewImage?2:1);attempt++){
+        if(!canContinue(context))throw error('art_cancelled_before_render');
+        job.render_attempt=attempt;job.scene_plan=plan;
+        if(attempt>1)job.seed=crypto.randomInt(0,0x7fffffff);
+        graph[c.prompt_node_id].inputs[c.prompt_input]=buildArtPrompt(rules,job,plan);
+        if(c.seed_node_id&&graph[c.seed_node_id])graph[c.seed_node_id].inputs.seed=job.seed;
+        if(job.kind==='illustration'&&c.size_node_id&&graph[c.size_node_id]){const [width,height]={square:[1024,1024],portrait:[832,1216],landscape:[1216,832]}[plan.orientation||'square'];Object.assign(graph[c.size_node_id].inputs,{width,height,batch_size:1});job.width=width;job.height=height;}
+        job.final_prompt=graph[c.prompt_node_id].inputs[c.prompt_input];job.workflow_sha256=crypto.createHash('sha256').update(JSON.stringify(graph)).digest('hex');
+        const record={attempt,seed:job.seed,prompt:job.final_prompt,workflow_sha256:job.workflow_sha256};job.attempts.push(record);write(file(job.id),job);
+        const result=await integration.submitImage({workflow:structuredClone(graph)});job.comfy_job_id=result.job_id;record.comfy_job_id=result.job_id;job.status='rendering';write(file(job.id),job);
+        const deadline=Date.now()+Math.max(1000,Math.min(1800000,Number(c.job_timeout_ms)||600000));let downloaded=false;
+        while(Date.now()<deadline){
+          if(!canContinue(context))throw error('art_cancelled_during_render');
+          const status=await integration.imageStatus(result.job_id);
+          if(status.status==='failed')throw error('comfy_execution_failed',502);
+          if(status.status==='completed'){
+            if(!status.images?.length)throw error('comfy_no_image',502);
+            await download(job,status.images[0],c);record.image_sha256=job.image_sha256;downloaded=true;break;
+          }
+          await new Promise(resolve=>{setTimeout(resolve,options.pollMs||1000);});
+        }
+        if(!downloaded)throw error('art_render_timeout',504);
+        if(!canContinue(context))throw error('art_cancelled_before_review');
+        if(options.reviewImage){
+          job.status='reviewing';write(file(job.id),job);
+          const review=await options.reviewImage({bytes:fs.readFileSync(path.join(root,job.asset_file)),action:{scene:job.scene,kind:job.kind,mood:job.mood},plan,profile:rules});
+          if(typeof review?.passed!=='boolean')throw error('art_review_invalid');record.review=review;write(file(job.id),job);
+          if(!canContinue(context))throw error('art_cancelled_after_review');
+          if(!review.passed){
+            if(attempt===2)throw error('art_quality_rejected');
+            job.status='revising';write(file(job.id),job);
+            plan=await planScene(job,rules,{review_issues:review.issues,repair_hint:review.repair_hint,previous_scene:plan.scene});continue;
+          }
+        }
+        job.status='completed';job.completed_at=new Date().toISOString();write(file(job.id),job);return;
+      }
     }catch(e){job.status='failed';job.error=e.code||'art_generation_failed';write(file(job.id),job);}
     finally{if(active===job.id)active=null;pending.delete(job.id);}
   }
   function submit(value,context={}) {
+    if(closed)throw error('art_service_closed',409);
     const c=config();if(!c.enabled)throw error('integration_disabled',409);localBase(c.base_url);
     if(context.source==='autonomous'&&!c.autonomous_enabled)throw error('art_autonomy_disabled',409);
     const action=normalizeAction(value);if(!action)throw error('invalid_art_action');
     const rules=profile();if(!rules)throw error('art_profile_missing',503);
-    const jobs=list(), requestId=String(context.requestId||'').slice(0,128);
+    const jobs=allJobs(), requestId=String(context.requestId||'').slice(0,128);
+    const groupDrawing=context.source==='qq_group';
+    const privateDrawing=context.source==='qq_private';
+    if(groupDrawing&&(typeof context.authorizeGroup!=='function'||context.authorizeGroup()!==true))throw error('art_group_authorization_required',403);
+    if(privateDrawing&&(typeof context.authorizePrivate!=='function'||context.authorizePrivate()!==true))throw error('art_private_authorization_required',403);
     if(requestId){const previous=jobs.find(j=>j.request_id===requestId&&j.session_id===(context.sessionId||'desktop-pet')
       &&(context.chatTurn?j.chat_epoch===context.chatTurn.epoch:true));if(previous)return publicJob(previous);}
     const chatSticker=context.source==='autonomous'&&action.kind==='sticker';
@@ -148,7 +197,9 @@ function createArtwork(options) {
     }
     if(active)throw error('art_busy',409);
     const today=new Date().toISOString().slice(0,10);
-    if(jobs.filter(j=>j.created_at.startsWith(today)).length>=Math.max(1,Math.min(100,Number(c.daily_limit)||20)))throw error('art_daily_limit',429);
+    // QQ group quotas are reserved durably by the host per group/Beijing day.
+    // Keep those jobs separate from the existing desktop/manual UTC quota.
+    if(!groupDrawing&&!privateDrawing&&jobs.filter(j=>!['qq_group','qq_private'].includes(j.source)&&j.created_at.startsWith(today)).length>=Math.max(1,Math.min(100,Number(c.daily_limit)||20)))throw error('art_daily_limit',429);
     if(context.source==='autonomous'&&!chatSticker&&jobs[0]&&Date.now()-Date.parse(jobs[0].created_at)<Math.max(0,Number(c.cooldown_seconds)||0)*1000)
       throw error('art_cooldown',429);
     const graph=structuredClone(c.workflow);
@@ -169,10 +220,10 @@ function createArtwork(options) {
     const snapshot=structuredClone(c);
     write(file(id),job);
     if(chatSticker){chatState.last_sticker_turn=context.chatTurn.turn;write(stateFile(context.sessionId),chatState);}
-    active=id;const promise=new Promise(resolve=>setImmediate(resolve)).then(()=>run(job,graph,snapshot));pending.set(id,promise);
+    active=id;const promise=new Promise(resolve=>setImmediate(resolve)).then(()=>run(job,graph,snapshot,rules,context));pending.set(id,promise);
     return publicJob(job);
   }
-  return {submit,get:id=>publicJob(get(id)),list:()=>list().map(publicJob),beginChatTurn,chatStickers,
+  return {submit,get:id=>publicJob(get(id)),list:()=>list().map(publicJob),beginChatTurn,chatStickers,close(){closed=true;},
     resetChat(sessionId){write(stateFile(sessionId),{turn:0,last_sticker_turn:null,epoch:crypto.randomUUID(),requests:[]});},
     async maybeGenerate(action,context){if(!config().enabled||!config().autonomous_enabled||!action||action.kind==='none')return null;
       try{return submit(action,{...context,source:'autonomous'});}catch(e){return {status:'skipped',reason:e.code||'art_unavailable'};}},

@@ -15,7 +15,9 @@ internal sealed class CompanionClient
 {
     private static readonly HttpClient Http = new()
     {
-        Timeout = TimeSpan.FromSeconds(40)
+        // DSH may run an approved tool task before returning the spoken reply.
+        // The local console can stop the runtime; retain the same request id in flight.
+        Timeout = TimeSpan.FromMinutes(35)
     };
 
     private readonly string _runtimePath = Path.Combine(ModPaths.DataRoot,
@@ -28,6 +30,26 @@ internal sealed class CompanionClient
     }
 
     internal long HistoryCursor { get; private set; }
+
+    internal async Task SetSpeechEnabledAsync(bool enabled, CancellationToken lifetime)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(lifetime);
+        timeout.CancelAfter(TimeSpan.FromSeconds(5));
+        RuntimeResponse response = await SendRuntimeRequestAsync(HttpMethod.Patch, "/v1/speech",
+            JsonSerializer.Serialize(new { enabled }), timeout.Token).ConfigureAwait(false);
+        if (!response.IsSuccessStatusCode) throw new InvalidOperationException("Speech settings unavailable");
+    }
+
+    internal async Task<bool> SendPetInteractionsAsync(IReadOnlyList<PetInteractionEvent> events, CancellationToken lifetime)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(lifetime);
+        timeout.CancelAfter(TimeSpan.FromSeconds(5));
+        RuntimeResponse response = await SendRuntimeRequestAsync(HttpMethod.Post, "/v1/pet/interactions",
+            JsonSerializer.Serialize(new { events }), timeout.Token).ConfigureAwait(false);
+        if (!response.IsSuccessStatusCode) return false;
+        using var document = JsonDocument.Parse(response.Json);
+        return document.RootElement.TryGetProperty("ok", out var ok) && ok.ValueKind == JsonValueKind.True;
+    }
 
     internal void InvalidateRuntime()
     {
@@ -194,6 +216,20 @@ internal sealed class CompanionClient
 
     public async Task<bool> StopCurrentTaskAsync(string sessionId, CancellationToken cancellationToken)
     {
+        RuntimeResponse native = await SendRuntimeRequestAsync(HttpMethod.Get,
+            "/v1/dsh", null, cancellationToken).ConfigureAwait(false);
+        if (native.IsSuccessStatusCode)
+        {
+            using var state = JsonDocument.Parse(native.Json);
+            if (ReadString(state.RootElement, "engine") == "dsh")
+            {
+                RuntimeResponse stoppedNative = await SendRuntimeRequestAsync(HttpMethod.Post,
+                    "/v1/dsh/stop", "{}", cancellationToken).ConfigureAwait(false);
+                if (!stoppedNative.IsSuccessStatusCode) throw new InvalidOperationException("DSH stop unavailable");
+                using var result = JsonDocument.Parse(stoppedNative.Json);
+                return result.RootElement.TryGetProperty("stopped", out var stoppedValue) && stoppedValue.ValueKind == JsonValueKind.True;
+            }
+        }
         RuntimeResponse response = await SendRuntimeRequestAsync(HttpMethod.Get,
             $"/v1/tasks?session_id={Uri.EscapeDataString(sessionId)}", null, cancellationToken).ConfigureAwait(false);
         if (!response.IsSuccessStatusCode) throw new InvalidOperationException("Task list unavailable");
