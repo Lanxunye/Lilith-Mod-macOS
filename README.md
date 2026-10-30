@@ -2,10 +2,10 @@
 
 基于 **Dreamer（[@cza2019](https://github.com/cza2019)）** 的开源项目 **[The-NOexistenceN-of-Lilith-Mod](https://github.com/cza2019/The-NOexistenceN-of-Lilith-Mod)**（上游 v0.3.4）。原项目为 Steam 桌宠游戏《不存在的莉莉丝》增加 AI 对话、角色记忆、剧情检索和音乐联动。本仓库在此基础上进行 macOS 适配及扩展，属于独立衍生项目，保留上游 MIT 版权、素材声明与贡献归属，未宣称获得上游官方背书。
 
-**当前版本：0.3.4-macos.dev15 · 开发预览；QQ 桥接：Beta 测试版。**
+**当前版本：0.3.4-macos.dev15.1 · 开发预览；QQ 桥接。**
 
 
-> **下载与部署**：[GitHub Releases](https://github.com/Lanxunye/Lilith-Mod-macOS/releases) → 下载 `macOS-setup.zip` 结尾的附件 → 解压 → 双击 **一键部署.command**。完整步骤见 [部署教程](docs/deployment-macos.md)。该入口需要 macOS 13.5+，自动准备 Node 并部署 WebUI；游戏插件安装要求先具备兼容加载器。QQ 桥接仍为 Beta。
+> **下载与部署**：[GitHub Releases](https://github.com/Lanxunye/Lilith-Mod-macOS/releases) → 下载 `macOS-setup.zip` 结尾的附件 → 解压 → 双击 **一键部署.command**。完整步骤见 [部署教程](docs/deployment-macos.md)。该入口需要 macOS 13.5+，自动准备 Node 并部署 WebUI；游戏插件安装要求先具备兼容加载器。QQ 桥接已集成。
 
 本项目让官方 Mac 桌宠、浏览器控制台和 QQ 共享莉莉丝的固定人设，并按通道权限使用记忆、情绪与本机能力。聊天通过本机 DSH 接入；绘图使用本地 ComfyUI；QQ 使用用户自己的小号与 OneBot 协议端。可先只安装控制台，再逐项开启游戏、QQ、绘图、看图和朗读。
 
@@ -36,7 +36,7 @@
 - 桌面、WebUI 和 QQ 对话统一使用本机 DeepSeek Harness（DSH）原生认证与模型；独立工作区、完整 Purge 莉莉丝适配版、删除与高危操作逐次明文确认。
 - DSH 桌面侧栏“莉莉丝”面板：桌宠/主人私聊记录同步、原会话续聊回写、工作区 JSONL 导出；保留操作确认。
 - DSH 情绪插件：基于鱼的心情 0.7.0 的莉莉丝 SDK 适配；桌面与主人私聊共享情绪，控制台可查看原因与关闭判断/注入，见 [情绪说明](DSH.md#情绪插件2026-10-25)。
-- **QQ 桥接（测试版）**：在莉莉丝 WebUI 统一配置、检查连接、暂停、查看交付与额度。主人私聊、白名单群聊、成员区分和同群文字引用；选择性接话、@ 优先，按话题停止，所有群每天合计最多 100 条（北京时间）。
+- **QQ 桥接**：在莉莉丝 WebUI 统一配置、检查连接、暂停、查看交付与额度。主人私聊、白名单群聊、成员区分和同群文字引用；选择性接话、@ 优先，按话题停止，所有群每天合计最多 100 条（北京时间）。
 - **群聊本地生图**：白名单群内实际 @ 莉莉丝并明确请求绘图，使用既有 ComfyUI 工作流；由莉莉丝自然回应，完成后独立发图，每群每天最多 10 次提交；绘图前编排可见场景，明确处理睡姿和闭眼，编排失败时使用本地回退，见 [群聊生图说明](docs/qq-group-art.md)。
 - **完整 QQ 指令帮助**：主人私聊发送 `/lls`、`/lls help` 或 `/lls ?` 查看全部命令、参数与别名；帮助和参数校验共用命令表，错误输入会显示完整帮助。
 
@@ -63,7 +63,7 @@ node scripts/open-console.cjs
 node scripts/open-console.cjs --tab=qq
 ```
 
-先安装兼容的 DeepSeek Harness 并在其原生模型/账户设置中完成认证，再在莉莉丝控制台连接 DSH；正式对话不使用旧 Mod API Key。视觉识别等独立服务仍在本机配置。QQ 还需自行安装和登录协议端，按 [QQ 接入步骤](docs/usage.md#qq-桥接测试版) 配置双方令牌。
+先安装兼容的 DeepSeek Harness 并在其原生模型/账户设置中完成认证，再在莉莉丝控制台连接 DSH；正式对话不使用旧 Mod API Key。视觉识别等独立服务仍在本机配置。QQ 还需自行安装和登录协议端，按 [QQ 接入步骤](docs/usage.md#qq-桥接) 配置双方令牌。
 
 **全新游戏的加载器仍需单独安装；本版一键包可以部署控制台，并在已有兼容加载器上安装/更新游戏插件。** 需要合法的 Steam Mac 游戏、自备对应的 BepInEx/CLR、interop 和本地构建工具；Apple Silicon 需要 Rosetta 运行 x86_64 游戏。请按 [macOS 构建与预览边界](docs/macos-preview.md) 操作。源码不附游戏、模型、QQ、NapCat、加载器二进制或个人配置。
 
@@ -89,7 +89,7 @@ node scripts/open-console.cjs --tab=qq
 ## 文档与开发
 
 - [使用指南](docs/usage.md) · [macOS 依赖与构建](docs/macos-preview.md)
-- [QQ 桥接 Beta：设计与实现边界](QQBOT.md)
+- [QQ 桥接：设计与实现边界](QQBOT.md)
 - [QQ 完整命令](docs/qq-commands.md) · [语音与温柔模式](docs/chat-speech.md) · [群聊本地生图](docs/qq-group-art.md)
 - [绘图与聊天表情](COMFYUI.md) · [DSH 原生对话与操作确认](DSH.md)
 - [依赖锁定清单](dependencies-macos.json) · [发布检查](docs/release-macos-preflight.md)
@@ -108,3 +108,6 @@ GitHub Actions 运行 Linux / macOS 的源码测试，不执行游戏。Release 
 目前仅在开发者的 Mac / 游戏 1.1.0 环境完成部分实机验收，干净机器安装、Intel Mac、较低 macOS、多屏和长时间运行尚需验证。原生库的 macOS 11 编译目标不代表旧系统实测通过；固定加载器仍依赖已结束支持的 .NET 6，属于正式发布待处理项。WebUI/QQ 可独立运行在 Node 24 上。
 
 原创代码沿用 [MIT License](LICENSE)，保留 `Copyright (c) 2026 Dreamer`。游戏角色、上游赞赏码和第三方组件分别受 [素材声明](ASSET-NOTICE.md) 与 [第三方声明](THIRD-PARTY-NOTICES.md) 约束。感谢原作者开源，以及 BepInEx、DeepSeek Harness、ComfyUI、NapCat 等上游项目。
+
+
+模型来源、直接下载、放置目录与 SHA-256 清单见 [模型下载指南](docs/models.md)。

@@ -1,6 +1,6 @@
 # 使用指南（macOS 开发预览）
 
-本项目基于 [Dreamer / cza2019 的原 Mod](https://github.com/cza2019/The-NOexistenceN-of-Lilith-Mod)。本版提供一键控制台部署包及已有兼容加载器上的游戏插件安装；QQ 桥接为测试版。首次部署请优先阅读 [完整部署教程](deployment-macos.md)。以下示例不包含任何真实账号、密钥或个人目录。
+本项目基于 [Dreamer / cza2019 的原 Mod](https://github.com/cza2019/The-NOexistenceN-of-Lilith-Mod)。本版提供一键控制台部署包及已有兼容加载器上的游戏插件安装；QQ 桥接已集成。首次部署请优先阅读 [完整部署教程](deployment-macos.md)。以下示例不包含任何真实账号、密钥或个人目录。
 
 ## 1. 启动莉莉丝 WebUI
 
@@ -11,7 +11,7 @@ npm ci --ignore-scripts --prefix companion
 node scripts/open-console.cjs
 ```
 
-启动器会启动或复用本机常驻 Companion，并用本机认证打开控制台。游戏与控制台入口还会检查 DSH、QQ 协议端和 ComfyUI；已配置自动启动的本机依赖会一同拉起，详见[统一启动说明](startup-services.md)。默认数据目录是 `~/Library/Application Support/LilithAI/`，默认服务端口 6186，仅监听本机。页面包含聊天、绘图、Mod 设置、记忆、扩展服务和 **QQ 桥接 · 测试版**，不需要把管理端口暴露到公网。
+启动器会启动或复用本机常驻 Companion，并用本机认证打开控制台。游戏与控制台入口还会检查 DSH、QQ 协议端和 ComfyUI；已配置自动启动的本机依赖会一同拉起，详见[统一启动说明](startup-services.md)。默认数据目录是 `~/Library/Application Support/LilithAI/`，默认服务端口 6186，仅监听本机。页面包含聊天、绘图、Mod 设置、记忆、扩展服务和 **QQ 桥接**，不需要把管理端口暴露到公网。
 
 已有旧版游戏持有服务时，常驻启动器会提示先退出游戏，不自动关闭游戏。首次尝试可使用单独的数据目录；同一数据目录在启动和打开页面时必须一致：
 
@@ -61,7 +61,7 @@ node scripts/open-console.cjs --tab=chat
 
 安装本项目的 [`dsh-desktop-bridge`](../dsh-desktop-bridge/README.md) 插件后，重启 DSH，点击左侧“莉莉丝”。该面板同步桌宠与主人私聊档案，输入后“发送并回写”；确认提示仍需本次准确明文短语。普通 DSH 会话列表不生成镜像会话。同步文件保存在专用工作区的 `莉莉丝对话同步/对话记录.jsonl`，仅作为聊天库投影。
 
-## QQ 桥接（测试版）
+## QQ 桥接
 
 开发预览新增[统一交流状态与只读预演](qq-mind.md)，默认观察模式，入口在 QQ 控制台的同名折叠面板。预演不会调用模型、保存模拟文字或发送消息；切换状态模式不会开启回复。完整的新规则见[自主能力开发预览](qq-autonomy-preview.md)。
 
@@ -74,7 +74,7 @@ node scripts/open-console.cjs --tab=chat
 1. 启动并登录协议端。NapCat 的管理页登录 Token 来自自己的 NapCat 配置或启动日志，**不是 DeepSeek Key，也不是下面的 OneBot Token**。QQ 登录扫码由用户确认。
 2. 在 NapCat 配置 OneBot **HTTP Server**，仅监听 `127.0.0.1`，例如端口 `3000`，启用鉴权并设置随机的 API Token。
 3. 设置 OneBot **HTTP Client** 事件上报为 `http://127.0.0.1:6186/onebot/events`（Companion 若改端口也需同步），格式选 **array**。HTTP Client 的 `token` 用于 HMAC-SHA1 事件签名，需与莉莉丝页面的事件 Secret 完全一致。
-4. 运行 `node scripts/open-console.cjs --tab=qq`，进入莉莉丝控制台的 **QQ 桥接 · 测试版**。填写小号 QQ、主人 QQ、OneBot HTTP API 地址，例如 `http://127.0.0.1:3000`、对应 API Token，以及事件 Secret。两个 Secret 建议使用不同的随机值，均不要公开。
+4. 运行 `node scripts/open-console.cjs --tab=qq`，进入莉莉丝控制台的 **QQ 桥接**。填写小号 QQ、主人 QQ、OneBot HTTP API 地址，例如 `http://127.0.0.1:3000`、对应 API Token，以及事件 Secret。两个 Secret 建议使用不同的随机值，均不要公开。
 5. 勾选启用，先保留“暂停收发”，保存配置，点击 **检查小号连接**。检查只验证实际登录账号与配置的小号一致，不会发送消息。完成后取消暂停并保存。
 6. 用已互为好友的主人 QQ 发一句文字私聊，检查实际回复及页面交付状态。除绑定主人外的私聊、陌生人和自身回声会忽略。
 

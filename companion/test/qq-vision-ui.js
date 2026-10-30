@@ -15,6 +15,6 @@ const root=fs.mkdtempSync(path.join(os.tmpdir(),'lilith-vision-ui-'));process.en
   assert.equal((await api('POST','/v1/qq/vision/probe',{})).body.ok,true);assert.equal(visualCalls,1);
   const liveState=(await api('GET','/v1/qq')).body;assert.equal(liveState.vision_status,'verified_this_run');assert.equal(typeof liveState.local_build,'string');
   assert.equal((await api('POST','/v1/qq/voice/synthesize',{text:'你好'})).status,400);
-  console.log('qq-vision-ui: authenticated settings/save/probe, beta console controls, redacted key, paused QQ, 100/day and no round cap passed.');
+  console.log('qq-vision-ui: authenticated settings/save/probe, QQ console controls, redacted key, paused QQ, 100/day and no round cap passed.');
  }finally{await app.qq.close();await app.tasks.close();await app.mediaMonitor.stop();await new Promise(r=>app.server.close(r));fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});

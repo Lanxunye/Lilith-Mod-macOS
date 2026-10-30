@@ -1,6 +1,6 @@
 # macOS 部署教程 · dev15
 
-适用版本：`0.3.4-macos.dev15`，2026-10-30。QQ 桥接为 Beta。本项目基于 [Dreamer / cza2019 原 Mod](https://github.com/cza2019/The-NOexistenceN-of-Lilith-Mod)，保留原版权；它是独立的 Mac 衍生项目。
+适用版本：`0.3.4-macos.dev15.1`，2026-10-30。QQ 桥接已集成。本项目基于 [Dreamer / cza2019 原 Mod](https://github.com/cza2019/The-NOexistenceN-of-Lilith-Mod)，保留原版权；它是独立的 Mac 衍生项目。
 
 ## 系统要求
 
@@ -19,7 +19,7 @@
 
 ## 1. 下载与校验
 
-1. 从 [本仓库 Releases](https://github.com/Lanxunye/Lilith-Mod-macOS/releases) 选择 dev15，下载 `Lilith-Mod-0.3.4-macos.dev15-macOS-setup.zip` 和 `SHA256SUMS.txt`。不要误选 GitHub 自动生成的 Source code ZIP；它没有预编译插件和包内校验清单。
+1. 从 [本仓库 Releases](https://github.com/Lanxunye/Lilith-Mod-macOS/releases) 选择 dev15.1，下载 `Lilith-Mod-0.3.4-macos.dev15.1-macOS-setup.zip` 和 `SHA256SUMS.txt`。不要误选 GitHub 自动生成的 Source code ZIP；它没有预编译插件和包内校验清单。
 2. 在终端进入下载目录，执行 `shasum -a 256 -c SHA256SUMS.txt`。若只下载一个 ZIP，会出现另一个源码 ZIP 缺失的提示；只需核对自己下载的 ZIP 对应行显示 OK，也可以同时下载两个 ZIP 再执行检查。
 3. 用归档实用工具解压到独立目录，避免混入旧版本文件。包内 `SHA256SUMS.txt` 校验各个文件；包外同名文件校验 ZIP 本身。
 4. 双击 `一键部署.command`。若 macOS 提示来源或阻止打开，先核对下载来源与校验结果，再按系统允许的“打开”流程自行操作；不要批量关闭系统安全保护。
@@ -38,7 +38,7 @@ chmod +x 一键部署.command 安装游戏插件.command
 部署后程序位于：
 
 ```text
-~/Library/Application Support/LilithMod/versions/0.3.4-macos.dev15/
+~/Library/Application Support/LilithMod/versions/0.3.4-macos.dev15.1/
 ~/Library/Application Support/LilithMod/runtime/node-v24.22.1-darwin-<架构>/
 ~/Library/Application Support/LilithMod/打开莉莉丝控制台.command
 ```
@@ -88,7 +88,7 @@ chmod +x 一键部署.command 安装游戏插件.command
 
 备份位于 `~/Library/Application Support/LilithMod/backups/<时间>/`。旧插件目录在安装暂存目录中也会保留，不自动清理私人文件。本版安装器会更新启动入口，但不会替你修改 Steam 启动选项、系统登录项或强制关闭正在运行的游戏。
 
-## 5. QQ 桥接 Beta
+## 5. QQ 桥接
 
 1. 准备专用 QQ 小号和主人账号，自己安装兼容 NapCat / OneBot，并由本人完成扫码与安全验证。普通小号使用第三方接入存在风控风险，不能保证免封。
 2. NapCat 启用 HTTP Server，仅监听 `127.0.0.1`，例如 6190，设置随机 API Token。
@@ -114,7 +114,7 @@ chmod +x 一键部署.command 安装游戏插件.command
 
 ## 7. 首次验收清单
 
-- [ ] 控制台能打开，构建号为 dev15；关闭模拟回复后 DSH 能真实回答。
+- [ ] 控制台能打开，构建号为 dev15.1；关闭模拟回复后 DSH 能真实回答。
 - [ ] 启用 QQ 后身份检查通过，主人私聊一问一答能看到平台交付回执。
 - [ ] 启用群聊后只在白名单群处理；关闭群聊后仍可使用主人管理命令。
 - [ ] 安装游戏后从 Mod 入口启动，透明桌宠、中文输入、气泡、普通 Spaces 跟随正常。
@@ -152,3 +152,6 @@ chmod +x 一键部署.command 安装游戏插件.command
 | 不自动出图/语音 | 通道开关 → 本地服务健康 → 模型/工作流名称 → 权限与额度 → 页面错误 |
 
 日志可能包含私人聊天、路径和票据。提 Issue 前仅保留版本、脱敏错误码与复现步骤，不上传 `config.json`、`qq.json`、`runtime.json`、SQLite、登录目录或整个游戏。
+
+
+模型来源、直接下载、放置目录与 SHA-256 清单见 [模型下载指南](models.md)。

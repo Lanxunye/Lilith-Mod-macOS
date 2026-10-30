@@ -1,5 +1,5 @@
 {
-  "version": "0.3.4-macos.dev15",
+  "version": "0.3.4-macos.dev15.1",
   "date": "2026-10-30",
   "game_version": "1.1.0",
   "unity_version": "2021.3.45f2",
@@ -34,10 +34,10 @@
   "ui_fixes_documentation": "输入与画室修复-20261022.md",
   "dsh_documentation": "DSH.md",
   "native_deployment_target": "11.0",
-  "release_readiness": "public_beta_console_setup_and_existing_loader_plugin_update",
+  "release_readiness": "public_console_setup_and_existing_loader_plugin_update",
   "official_installation": "passed_official_game_tray_registration_mod_menu_and_authenticated_health_after_class_namespace_hotfix",
   "native_class_namespace_regression": "passed_old_library_negative_control_and_fixed_library_coexistence",
-  "qq": "beta_user_accepted_private_and_group_text_speaker_quote_update_deployed",
+  "qq": "user_accepted_private_and_group_text_speaker_quote_update_deployed",
   "qq_desktop_sync": "compiled_not_yet_game_runtime_verified",
   "spaces_follow": "passed_user_accepted_live_official_game_desktop_spaces_switch",
   "qq_private_stickers": "passed_user_confirmed_two_real_qq_images_receipts_and_rolling_three_reply_limit",
@@ -86,5 +86,6 @@
     "toggle": "/lls pdraw on|off",
     "pipeline": "shared_ds_comfy_visual_review"
   },
-  "original_music_launcher": "passed_user_confirmed_original_menu_and_native_success_reaction"
+  "original_music_launcher": "passed_user_confirmed_original_menu_and_native_success_reaction",
+  "qq_release_stage": "released"
 }

@@ -103,7 +103,7 @@ function createQQBridge({root,store,chat,getPlayerName,request=fetch,autoTick=tr
     }catch(e){store.db.exec('ROLLBACK');throw e;}
   }
   const collectionStatus=()=>{const row=store.db.prepare('SELECT status,recognized,stickers,attempts,updated_at AS at FROM qq_collection_log ORDER BY updated_at DESC,rowid DESC LIMIT 1').get();return row||null;};
-  const status=()=>({release_stage:'beta',enabled:cfg.enabled,paused:cfg.paused,owner_id:store.ownerId,owner_qq:cfg.owner_qq,bot_qq:cfg.bot_qq,
+  const status=()=>({release_stage:'released',enabled:cfg.enabled,paused:cfg.paused,owner_id:store.ownerId,owner_qq:cfg.owner_qq,bot_qq:cfg.bot_qq,
     group_enabled:cfg.group_enabled,group_ids:cfg.group_ids,group_daily_limit:100,group_round_limit:null,group_timezone:'Asia/Shanghai',group_day:day(),group_daily_used:used(),
     collection_status:collectionStatus(),collection_failed:store.db.prepare("SELECT COUNT(*) AS n FROM inbox WHERE state='collection_failed'").get().n,group_rounds:[],social_state:store.db.prepare('SELECT group_id,topic,active,last_inbound,last_sent FROM qq_social_state WHERE bot=?').all(cfg.bot_qq),...capabilities.status(),...qqSpeech.status(),...groupArt.status(),...privateArt.status(),
     api_url:cfg.api_url,session_id:cfg.session_id,mirror_desktop:cfg.mirror_desktop,min_interval_ms:cfg.min_interval_ms,max_per_minute:cfg.max_per_minute,private_sticker_cadence:privateCadence(),

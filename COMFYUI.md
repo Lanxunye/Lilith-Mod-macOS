@@ -62,3 +62,6 @@ ComfyUI 的提交、历史和图片读取遵循[官方 HTTP 路由](https://docs
 `companion/workflows/lilith-zimage-local.json` 是 API 图；本地原画布工作流未修改。转换脚本 `scripts/import-comfy-workflow.py` 按运行中 ComfyUI 的节点 schema 转换，正确跳过种子的 UI 控制项。插画使用 1024×1024、表情包使用 768×768，保持 8 步、CFG=1、原采样器/调度器，批量固定为 1。
 
 构建并安装到独立副本前退出开发游戏；可先用 `LILITH_BUILD_ONLY=1 bash scripts/build-macos.sh` 只生成输出，再按开发环境部署并重启。不要向正在运行的游戏覆盖 DLL/dylib。
+
+
+模型来源、直接下载、放置目录与 SHA-256 清单见 [模型下载指南](docs/models.md)。
