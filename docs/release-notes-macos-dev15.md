@@ -8,7 +8,7 @@
 
 ## 附件
 
-- `macOS-setup.zip`：公开源码、许可、部署入口、预编译 Mod DLL 与原生桥。首次运行联网下载 Node。
+- `macOS-setup.zip`：公开源码、许可、部署入口、预编译 Mod DLL 与原生桥。需要 macOS 13.5+，首次运行联网下载 Node。
 - `macOS-source.zip`：公开源码、许可、构建与部署脚本；不含插件二进制。
 - `SHA256SUMS.txt`：上述 ZIP 的 SHA-256。解压目录内另有逐文件校验表。
 

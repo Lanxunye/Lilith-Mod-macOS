@@ -2,6 +2,10 @@
 
 适用版本：`0.3.4-macos.dev15`，2026-10-30。QQ 桥接为 Beta。本项目基于 [Dreamer / cza2019 原 Mod](https://github.com/cza2019/The-NOexistenceN-of-Lilith-Mod)，保留原版权；它是独立的 Mac 衍生项目。
 
+## 系统要求
+
+一键部署包需要 **macOS 13.5 或更新版本**，支持 arm64 / x64 的 Node 下载选择；完整游戏仍按已验证的 x86_64 / Rosetta 链路加载。[Node 24.22.1 官方平台说明](https://github.com/nodejs/node/blob/v24.22.1/BUILDING.md#platform-list) 将 macOS 13.5 列为两种架构的最低版本。原生桥的 macOS 11 编译目标不能覆盖 Node 的最低系统要求。Intel 与旧系统上的完整游戏仍未获得本项目实机验收。
+
 ## 先选择部署范围
 
 | 目标 | 一键包负责 | 仍需准备 |

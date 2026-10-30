@@ -3,6 +3,11 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 [ "$(uname -s)" = Darwin ] || { echo '此入口仅支持 macOS。'; exit 1; }
+IFS=. read -r OS_MAJOR OS_MINOR OS_PATCH <<< "$(/usr/bin/sw_vers -productVersion)"
+if [ "$OS_MAJOR" -lt 13 ] || { [ "$OS_MAJOR" -eq 13 ] && [ "${OS_MINOR:-0}" -lt 5 ]; }; then
+  echo '本包固定 Node 24，需要 macOS 13.5 或更新版本。原生桥的 macOS 11 编译目标不代表完整部署包支持旧系统。'
+  exit 1
+fi
 ARCH="$(uname -m)"
 case "$ARCH" in
   arm64) EXPECTED=89c682593d76cd44233fa53b1563264e7de9cbb189cad169135c5b4fadfbc0a7 ;;

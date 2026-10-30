@@ -5,7 +5,7 @@
 **当前版本：0.3.4-macos.dev15 · 开发预览；QQ 桥接：Beta 测试版。**
 
 
-> **下载与部署**：[GitHub Releases](https://github.com/Lanxunye/Lilith-Mod-macOS/releases) → 下载 `macOS-setup.zip` 结尾的附件 → 解压 → 双击 **一键部署.command**。完整步骤见 [部署教程](docs/deployment-macos.md)。该入口自动准备 Node 并部署 WebUI；游戏插件安装要求先具备兼容加载器。QQ 桥接仍为 Beta。
+> **下载与部署**：[GitHub Releases](https://github.com/Lanxunye/Lilith-Mod-macOS/releases) → 下载 `macOS-setup.zip` 结尾的附件 → 解压 → 双击 **一键部署.command**。完整步骤见 [部署教程](docs/deployment-macos.md)。该入口需要 macOS 13.5+，自动准备 Node 并部署 WebUI；游戏插件安装要求先具备兼容加载器。QQ 桥接仍为 Beta。
 
 本项目让官方 Mac 桌宠、浏览器控制台和 QQ 共享莉莉丝的固定人设，并按通道权限使用记忆、情绪与本机能力。聊天通过本机 DSH 接入；绘图使用本地 ComfyUI；QQ 使用用户自己的小号与 OneBot 协议端。可先只安装控制台，再逐项开启游戏、QQ、绘图、看图和朗读。
 
