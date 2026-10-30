@@ -1,6 +1,6 @@
 # 安装、升级与卸载
 
-[简体中文](installation.md) · [繁體中文](installation.zh-TW.md) · [English](installation.en.md) · [日本語](installation.ja.md)
+[简体中文](installation.windows.zh-CN.md) · 繁體中文（参见上游仓库） · English（参见上游仓库） · 日本語（参见上游仓库）
 
 ## 系统要求
 

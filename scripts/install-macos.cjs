@@ -29,30 +29,32 @@ function install({root,base,check=false}){
  const quote=s=>"'"+s.replace(/'/g,"'\\''")+"'";
  fs.writeFileSync(entry,'#!/bin/bash\nset -euo pipefail\nexec '+quote(node)+' '+quote(path.join(dest,'scripts/open-console.cjs'))+' "$@"\n',{mode:0o755});
  fs.chmodSync(entry,0o755);
+ const restart=path.join(base,'重启聊天后台.command');fs.writeFileSync(restart,'#!/bin/bash\nset -euo pipefail\nexec '+quote(node)+' '+quote(path.join(dest,'scripts/restart-services.cjs'))+'\n',{mode:0o755});fs.chmodSync(restart,0o755);
  return {version:metadata.version,dest,entry,verified:true};
 }
-function gamePlan(root,game){
+function gamePlan(root,game,allowMissingLoader=false){
  const app=path.join(game,'Lilith.app'),plist=path.join(app,'Contents/Info.plist');
  const value=k=>execFileSync('/usr/libexec/PlistBuddy',['-c','Print :'+k,plist],{encoding:'utf8'}).trim();
  if(value('CFBundleIdentifier')!=='com.Nino.Lilith'||value('CFBundleShortVersionString')!=='1.1.0')throw Error('仅支持官方 Mac 游戏 1.1.0；请选择包含 Lilith.app 的目录。');
  const metadata=JSON.parse(fs.readFileSync(path.join(root,'macos-release.json'),'utf8'));
- const required=['run_bepinex.sh','libdoorstop.dylib','dotnet/libcoreclr.dylib','BepInEx/interop/Assembly-CSharp.dll','BepInEx/core/LilithLoaderCompat.dll','BepInEx/core/liblilith_probe_dispatch.dylib'];
- for(const name of required)if(!fs.existsSync(path.join(game,name)))throw Error('缺少兼容加载器组件：'+name+'。请先完成 docs/macos-preview.md 的加载器步骤。');
- for(const [name,key] of [['BepInEx/core/BepInEx.Unity.IL2CPP.dll','loader'],['BepInEx/core/LilithLoaderCompat.dll','loader_compat']])if(hash(path.join(game,name))!==metadata.artifacts[key].sha256)throw Error('加载器与本包验证版本不一致：'+name);
+ const required=['run_bepinex.sh','libdoorstop.dylib','dotnet/libcoreclr.dylib','BepInEx/core/LilithLoaderCompat.dll','BepInEx/core/liblilith_probe_dispatch.dylib'];
+ if(!allowMissingLoader)for(const name of required)if(!fs.existsSync(path.join(game,name)))throw Error('缺少兼容加载器组件：'+name+'。请先完成 docs/macos-preview.md 的加载器步骤。');
+ if(!allowMissingLoader)for(const [name,key] of [['BepInEx/core/BepInEx.Unity.IL2CPP.dll','loader'],['BepInEx/core/LilithLoaderCompat.dll','loader_compat']])if(hash(path.join(game,name))!==metadata.artifacts[key].sha256)throw Error('加载器与本包验证版本不一致：'+name);
  const running=execFileSync('/bin/ps',['-axo','comm='],{encoding:'utf8'});
- if(running.split('\n').some(x=>x.trim().endsWith('/Lilith.app/Contents/MacOS/Lilith')))throw Error('请先退出所有莉莉丝游戏，再安装插件。');
+ if(running.split('\n').some(x=>x.trim()===path.join(game,'Lilith.app/Contents/MacOS/Lilith')))throw Error('请先退出所有莉莉丝游戏，再安装插件。');
  if(spawnSync('/usr/bin/arch',['-x86_64','/usr/bin/true']).status!==0)throw Error('需要可运行 x86_64 程序的系统；Apple Silicon 请先安装 Rosetta 并自行接受 Apple 许可。');
  for(const name of ['LilithMod.dll','liblilith_macos.dylib'])if(!fs.existsSync(path.join(root,'payload',name)))throw Error('缺少插件二进制：'+name);
  return {game,metadata};
 }
 async function installGame(root,game,base){
- const plan=gamePlan(root,game);
- console.log('将更新此游戏的附加插件：'+plan.game+'\n原插件会备份；游戏 .app、存档、聊天配置不改动。');
+ const plan=gamePlan(root,game,true);
+ console.log('将安装或更新此游戏的 Mod：'+plan.game+'\n缺少加载器时自动下载并在本机生成兼容版本；旧组件会备份。游戏 .app、存档和聊天配置不改动。');
  const rl=require('node:readline/promises').createInterface({input:process.stdin,output:process.stdout});
- let yes;try{yes=await rl.question('输入 INSTALL 确认该目录：');}finally{rl.close();}
- if(yes!=='INSTALL')throw Error('已取消安装');
- gamePlan(root,game); // Recheck after the user has seen the target.
+ let yes;try{yes=await rl.question('确认目录正确后，输入 安装（或 INSTALL）并回车：');}finally{rl.close();}
+ if(!['INSTALL','安装'].includes(yes.trim()))throw Error('已取消安装');
+ gamePlan(root,game,true); // Recheck before preparing dependencies.
  const backup=path.join(base,'backups',new Date().toISOString().replace(/[:.]/g,'-'));fs.mkdirSync(backup,{recursive:true});
+ const loaderTools=require('./prepare-game-loader.cjs');const loader=loaderTools.prepareGameLoader(root,game,base);gamePlan(root,game,true);loaderTools.installPreparedLoader(loader,game,path.join(backup,'loader'));
  const files=['LilithMod.dll','liblilith_macos.dylib','companion','character','locales','assets'];
  const plugins=path.join(game,'BepInEx/plugins');
  for(const name of files){const target=path.join(plugins,name);if(fs.existsSync(target))fs.cpSync(target,path.join(backup,name),{recursive:true});}
@@ -64,8 +66,10 @@ async function installGame(root,game,base){
   fs.mkdirSync(plugins,{recursive:true});
   for(const name of files){const target=path.join(plugins,name);if(fs.existsSync(target))fs.renameSync(target,path.join(stage,name+'.previous'));completed.push(name);fs.renameSync(path.join(stage,name),target);}
   const support=path.join(game,'LilithMod');fs.mkdirSync(path.join(support,'runtime/node/bin'),{recursive:true});
-  for(const name of ['launch-installed-macos.cjs','companion-service.cjs','startup-services.cjs','open-console.cjs']){const target=path.join(support,name);if(fs.existsSync(target))fs.copyFileSync(target,path.join(backup,name));fs.copyFileSync(path.join(root,'scripts',name),target);}
+  for(const name of ['launch-installed-macos.cjs','companion-service.cjs','startup-services.cjs','open-console.cjs','uninstall-installed-macos.cjs']){const target=path.join(support,name);if(fs.existsSync(target))fs.copyFileSync(target,path.join(backup,name));fs.copyFileSync(path.join(root,'scripts',name),target);}
   fs.copyFileSync(process.execPath,path.join(support,'runtime/node/bin/node'));fs.chmodSync(path.join(support,'runtime/node/bin/node'),0o755);
+  for(const name of ['LICENSE','ASSET-NOTICE.md','THIRD-PARTY-NOTICES.md','dependencies-macos.json'])fs.copyFileSync(path.join(root,name),path.join(support,name));
+  fs.copyFileSync(path.join(root,'loader/LICENSE.upstream-LGPL-2.1.txt'),path.join(support,'LICENSE.BepInEx-LGPL-2.1.txt'));
   const nodeLicense=path.resolve(path.dirname(process.execPath),'../LICENSE');if(fs.existsSync(nodeLicense))fs.copyFileSync(nodeLicense,path.join(support,'runtime/node/LICENSE')); 
   const command=path.join(game,'启动莉莉丝Mod.command');if(fs.existsSync(command))fs.copyFileSync(command,path.join(backup,'启动莉莉丝Mod.command'));
   fs.writeFileSync(command,'#!/bin/bash\nset -euo pipefail\nHERE="$(cd "$(dirname "$0")" && pwd)"\nexec "$HERE/LilithMod/runtime/node/bin/node" "$HERE/LilithMod/launch-installed-macos.cjs" "$@"\n',{mode:0o755});fs.chmodSync(command,0o755);
@@ -73,19 +77,25 @@ async function installGame(root,game,base){
   for(const name of completed.reverse()){const target=path.join(plugins,name);fs.rmSync(target,{recursive:true,force:true});const old=path.join(stage,name+'.previous');if(fs.existsSync(old))fs.renameSync(old,target);}
   throw Error('安装未完成；已回退插件，支持文件备份在 '+backup+'；'+e.message);
  }
- console.log('插件安装完成。备份：'+backup+'\n先启动 Steam，再双击游戏目录中的 启动莉莉丝Mod.command。');
+ const installed=path.join(game,'LilithMod/installation.json');if(!fs.existsSync(installed))fs.writeFileSync(installed,JSON.stringify({version:plan.metadata.version,game_dir:game,backup,installed_entries:['BepInEx','dotnet','libdoorstop.dylib','run_bepinex.sh','.doorstop_version','Data','GameAssembly.dylib','启动莉莉丝Mod.command','停用莉莉丝Mod.command','LilithMod']}),{mode:0o600});
+ const disable=path.join(game,'停用莉莉丝Mod.command');fs.writeFileSync(disable,'#!/bin/bash\nset -euo pipefail\nHERE="$(cd "$(dirname "$0")" && pwd)"\nexec "$HERE/LilithMod/runtime/node/bin/node" "$HERE/LilithMod/uninstall-installed-macos.cjs"\n',{mode:0o755});fs.chmodSync(disable,0o755);
+ console.log('插件安装完成。首次启动会自动生成游戏互操作文件，可能需要几分钟。备份：'+backup+'\n先启动 Steam，再双击游戏目录中的 启动莉莉丝Mod.command。');
 }
 async function main(){
  if(process.platform!=='darwin')throw Error('部署入口仅支持 macOS');
  if(!process.versions.node.startsWith('24.'))throw Error('需要 Node 24');
  const root=path.resolve(__dirname,'..'),base=process.env.LILITH_INSTALL_ROOT||path.join(os.homedir(),'Library/Application Support/LilithMod');
+ if(process.argv.includes('--dependencies-only')){verify(root);const d=require('./prepare-game-loader.cjs').prefetch(root,base);console.log('基础依赖已下载并校验：'+path.join(base,'downloads')+'；不含 DSH。');return;}
  const result=install({root,base,check:process.argv.includes('--check')});console.log(JSON.stringify(result,null,2));
  if(process.argv.includes('--check'))return;
+ if(process.argv.includes('--restart-services')){await require('./restart-services.cjs').restart({support:path.join(result.dest,'scripts')});const p=spawnSync(process.execPath,[path.join(result.dest,'scripts/open-console.cjs'),'--tab=settings'],{stdio:'inherit'});if(p.status!==0)throw Error('后台已启动；重新打开控制台失败。');return;}
  if(process.argv.includes('--game')){
   const option=process.argv.find(a=>a.startsWith('--game-dir='));
   const game=option?path.resolve(option.slice(11)):path.join(os.homedir(),'Library/Application Support/Steam/steamapps/common/The NOexistenceN of Lilith');
   await installGame(result.dest,game,base);
- }else if(process.argv.includes('--launch')){
+ }
+ if(process.argv.includes('--launch')){
+  try{await require('./restart-services.cjs').restart({support:path.join(result.dest,'scripts')});}catch(e){console.log('程序文件已安装；'+e.message);}
   const p=spawnSync(process.execPath,[path.join(result.dest,'scripts/open-console.cjs'),'--tab=settings'],{stdio:'inherit'});if(p.status!==0)throw Error('文件部署完成；控制台启动失败，请检查私有数据目录的服务日志。');
  }
 }

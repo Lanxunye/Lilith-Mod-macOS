@@ -1,6 +1,6 @@
 # B站自主阅读与兴趣积累
 
-2026-10-27，正式版已装载 `dsh-bili-subagent 0.8.7-lilith.1`。上游固定为 Yuuyuko-uu/dsh-bili-subagent 0.8.7，提交 `68f25ed058cf06c9c1c2f4a99d36c3ff788155d0`。主人手机登录已验证，真实自主选题、资料读取及兴趣入库通过；补测已实际取得一条完整字幕。证据见 `evidence/bili-live-validation.json`、`evidence/bili-subtitle-live-validation.json`。
+可选扩展：使用 `dsh-bili-subagent 0.8.7-lilith.1`，基于 Yuuyuko-uu/dsh-bili-subagent 0.8.7，固定提交 `68f25ed058cf06c9c1c2f4a99d36c3ff788155d0`。需要独立准备插件所需的 Python 环境，并在控制台自行登录 B站。基础安装不会替你登录或开启自动阅读。
 
 ## 使用
 
@@ -38,6 +38,4 @@
 
 验证包含只读操作白名单与实例认证、真实SDK安装加载、独立原生DSH合成阅读、宿主私聊召回、同一主人群聊隔离、自己的兴趣归属、配额和重启持久化、关闭在途任务及既有功能回归。76组Node回归及4项Python网络边界检查通过；模拟验证不发真实QQ消息。
 
-实际验收由莉莉丝选题“古典绘画的光影处理如何影响当代摄影构图”，读取两条视频简介和评论接口；无字幕、空评论和读取失败如实标记。补测修复了本机Framework Python的CA证书缺失及代理DNS假IP拦截，开启证书验证并固定通过检查的公共CDN地址，实际取得《绘制光影课程--光照下的简单形体》完整字幕。保存了“光影如何塑造画面的情绪”的好奇及“用黑白光影塑造形体”的喜好与具体出处。日常主动分享及聊天体验仍由主人继续使用验收。
-
-初始选择记录见[接入方案](bili-learning-plan.md)；上游及许可见[适配说明](../dsh-bili-subagent-lilith/README.md)。
+上游、安装依赖与许可见[适配说明](../dsh-bili-subagent-lilith/README.md)。

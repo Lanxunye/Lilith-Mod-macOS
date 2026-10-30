@@ -81,6 +81,7 @@ async function pipeline(ctx, exec, shortcut = false) {
     for (const endpoint of ['https://127.0.0.1:3000', 'http://localhost:3000', 'http://example.com:3000',
       'http://127.0.0.1:3000/bad', 'http://user@127.0.0.1:3000', 'http://127.0.0.1:3000/?token=x'])
       assert.throws(() => validateGuardEndpoint(endpoint), /endpoint_invalid/);
+    const chatOnly=mockContext();installGuard(chatOnly,{url,token,home,cwd:ordinary,protectedPaths:[protectedRoot],toolsDisabled:true});assert.equal(chatOnly.definitions.size,0,'chat-only guard registers no read or list schemas');const beforeBlocked=requests.length;assert.equal((await pipeline(chatOnly,execution())).kind,'deny');assert.equal((await pipeline(chatOnly,execution(),true)).kind,'deny');assert.equal(chatOnly.guards[0](execution()),'LILITH_TOOLS_FORBIDDEN_IN_THIS_CONTEXT');assert.equal(requests.length,beforeBlocked,'chat-only tools never reach approval IPC');assert.equal(chatOnly.services.get('lilithGuardReady').tools_disabled,true);
     const ctx = mockContext();
     installGuard(ctx, {url, token, home, cwd: ordinary, protectedPaths: [protectedRoot], timeoutMs: 200});
     assert.deepEqual(ctx.services.get('lilithGuardReady'), {ready: true, policy: 'exact-operation-v1', all_tools_use_host_gate: true});

@@ -1,5 +1,5 @@
 {
-  "version": "0.3.4-macos.dev15.1",
+  "version": "0.3.4-macos.dev16",
   "game": {
     "version": "1.1.0",
     "unity": "2021.3.45f2",
@@ -86,6 +86,21 @@
       "required_for": "local cached audio statistics only",
       "redistributed": false,
       "without_decoder": "reports ffmpeg_unavailable; conversation and track metadata continue"
+    }
+  },
+  "installer_runtime": {
+    "version": "8.0.32",
+    "license": "MIT",
+    "purpose": "local loader patcher only; no SDK required",
+    "archives": {
+      "x64": {
+        "url": "https://builds.dotnet.microsoft.com/dotnet/Runtime/8.0.32/dotnet-runtime-8.0.32-osx-x64.tar.gz",
+        "sha512": "f6c4fb480c1e3f87f602e219f23f5e13834e5b6a2f6a72a75a6e8b1b2239da54acc57a8e85a15ca4f89fd042ac760f3df58551729039d4fb5fca76e3a9a4cd4c"
+      },
+      "arm64": {
+        "url": "https://builds.dotnet.microsoft.com/dotnet/Runtime/8.0.32/dotnet-runtime-8.0.32-osx-arm64.tar.gz",
+        "sha512": "982888e828ab7815fb14d1fabe1bd8230672dd4249923e69ba35be7c5272dfc41a7d7981c7bb1260b6e3858d48614cf2bb65c9b4bd5d03db3c85fb20e8930a34"
+      }
     }
   }
 }

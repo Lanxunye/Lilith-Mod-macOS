@@ -27,7 +27,10 @@ jobs:
       - name: Install locked dependency-free Companion
         run: npm ci --ignore-scripts --prefix companion
       - name: Setup installer tests
-        run: node tests/installer-macos.cjs
+        run: |
+          node tests/installer-macos.cjs
+          node tests/loader-installer.cjs
+          node tests/restart-services.cjs
       - name: Companion tests
         run: npm test --prefix companion
       - name: Managed portable tests

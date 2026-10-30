@@ -1,63 +1,43 @@
-# macOS 封包前自查 · 2026-10-23
+# macOS dev16 发布检查
 
-版本：`0.3.4-macos.dev7.2`。封包脚本只生成本地源码审查包、插件预览包及文件哈希，不执行 Git 推送、创建仓库或上传 Release。另按用户要求，在本机 Steam 正式游戏旁以可回退方式安装并验证了 Mod；游戏 .app 保持原样，该本机部署不属于公开 ZIP 的内容。
+本页面向维护者。玩家请从[安装教程](deployment-macos.md)开始。
 
-## 已检查及修正
+## 发布内容
 
-- dev6.1：正式游戏托盘会动态注册 `LilithMenuTarget`，旧 Mod dylib 抢占同名类，导致游戏把空 Class 传给 `objc_registerClassPair` 后崩溃。LLDB 已捕获类名、空参数及游戏调用栈；Mod 原生类统一改为独立命名空间，键盘窗口子类注册补充失败保护。原生回归中旧库必然复现同名冲突，新库可与游戏类共存。正式游戏现已成功注册托盘和 Mod 菜单，聊天服务返回 200；这不代替长期稳定性验收。
-- 正式版启动器补充异常信号退出码和所属进程组清理，防止原生崩溃被当成正常退出或遗留占用端口的后台服务。提供有备份的本机安装与停用脚本；公开插件 ZIP 仍不含游戏、加载器二进制和运行时。
+- 源码包与一键安装包各一份，附 SHA-256 清单。
+- 安装包只含自有插件、原生桥、补丁工具和允许公开的资源；在线下载固定版本依赖，在玩家本机生成兼容加载器。
+- 不附游戏、游戏生成的互操作程序集、修改后的上游加载器、DSH、模型、凭据、私人记录及登录缓存。
+- 莉莉丝默认纯聊天：全部操作工具和 REA 关闭，群聊历史最多 5 条；原有正式聊天档案和人设保留。
+- 只支持普通桌面跟随，全屏空间覆盖保持关闭。
 
-- 游戏内聊天自动派发 → 本机 DSH SDK 实际读写 → 莉莉丝交付已通过；重启续办、停止独立进程、文件下载及单次交付已验证。
-- 游戏“停止”使用独立鉴权控制请求，不被普通聊天的忙碌状态挡住。
-- 构建脚本支持外部游戏目录和 SDK 路径、只构建模式；新增带原始 DLL 哈希检查的 loader 重建脚本。游戏/生成 interop 不进公开包。
-- 自查发现原生库原先默认要求编译主机 macOS 27，安装标识还包含本机路径及 `.new` 后缀；已显式改为 macOS 11.0 编译目标和 `@rpath` 标识。旧系统仍需实机验证。
-- 关闭继承的 Windows 上游更新目标；Mac 更新未开放，避免误下载安装 Windows 资产。
-- 整理 Mac 主说明、Windows 上游归档、依赖清单、空密钥 Mac 配置样例与不发布资产的 CI 配置。
-- Companion 没有第三方 npm 依赖，已增加 lockfile。Node 24.22.1 从官方分发下载并核对 SHA-256，仅在本地隔离目录测试，不替换系统 Node。
-- 封包使用允许清单；扫描实际配置中的 Key/运行 token 精确值、密钥模式、本机用户路径及游戏/私人文件名；不把实际凭据写入报告。
-
-## 本地验证范围
-
-25 组 Node 与 5 个 C# 程序通过；Windows 音乐注册表 fixture 按既有平台限制跳过。Mod 与 loader 重建均 0 警告、0 错误。精确 be.790 原始 loader 经公开重建脚本产生的修改后 DLL 与当前已验证副本逐字节一致。
-
-另从候选源码树独立重建和回归：发现封包清单漏了 lore-candidates 测试所需的脚本，已补齐后重新通过。公开包包含参数化的开发启动器与工作流转换脚本，不依赖私有启动快捷方式。
-
-测试覆盖：普通聊天不误派发、手动覆盖、队列、去重、排队/执行中补充、续办、停止、重置、文件范围、符号链接、禁止覆盖原文件、JSON-RPC UTF-8 分帧、超时和子进程退出。
-
-GitHub CI 配置为 Ubuntu/macOS 的可移植测试，不请求游戏程序集、不执行发布；远端 CI 尚未运行。当前已实际验证的操作系统为 macOS 27.0.1、Apple Silicon + Rosetta；不宣称 Intel、较低 macOS 或多屏已验收。
-
-## 依赖与待处理项
-
-| 项目 | 结论 |
-| --- | --- |
-| BepInEx be.790 ZIP | 已固定 URL、原始归档 SHA-256 和原 loader SHA-256；预览不携带其二进制 |
-| 加载器 CoreCLR 6.0.7 x64 | .NET 6 已于 2024-11-12 结束支持，正式版本需评估兼容的受支持运行时方案 |
-| Node | 24.18.0 原实测；24.22.1 新版隔离回归，未修改全局安装 |
-| SDK 8.0.426 / clang | 本机构建通过；SDK 为开发依赖，不捆绑给玩家 |
-| DSH 0.2.1-rc.2 | 可选；SDK 联调通过，不打包桌面应用、内部插件或凭据 |
-| ComfyUI / 模型 | 可选；不打包模型和本机缓存，用户准备自己的工作流 |
-| 许可证 | 保留 MIT/素材声明，附上游 LGPL 文本及补丁重建材料；预览不包含修改后 LGPL DLL |
-| 干净机器安装与卸载 | 尚未完成；本次插件预览不是一键安装包 |
-| 长时运行、Intel、低版本 macOS、多屏 | 尚未完成正式发布验收 |
-| GitHub 仓库 | 源码目标 Lanxunye/Lilith-Mod-macOS；源码公开，尚不发布一键游戏安装包 |
-
-因此可以审查源码与开发预览产物，**不能将其标记为普通玩家可直接安装的正式稳定版**。真实模型、GPU 和游戏运行结果是功能验证，不代替依赖支持期、安装和跨设备验收。
-
-来源：[Microsoft .NET 6 支持结束公告](https://devblogs.microsoft.com/dotnet/dotnet-6-end-of-support/)、[BepInEx 固定版本许可证](https://github.com/BepInEx/BepInEx/blob/4e98359/LICENSE)、[Node 官方分发校验](https://nodejs.org/dist/v24.22.1/SHASUMS256.txt)。本次未把“无 npm 依赖”等同于整个运行栈无漏洞，也未完成第三方二进制的完整 CVE 审计。
-
-本地封包脚本：
+## 本地检查命令
 
 ```sh
-python3 scripts/prepare-github-macos.py \
-  --output /path/to/new-review-output \
+bash scripts/test-macos.sh
+bash scripts/test-native-macos.sh /path/to/liblilith_macos.dylib
+```
+
+可移植测试覆盖 92 组 Companion 测试命令、7 个 C# 程序，以及校验、版本隔离、加载器安装回退、后台忙碌拒绝重启等安装器测试。原生回归检查类名隔离和普通桌面策略。实际测试结果以对应发布记录与 CI 为准，模拟测试不等于实机 QQ 收发。
+
+构建需要开发者自行准备游戏和 .NET SDK 8；玩家安装不需要 SDK。先按[加载器说明](../loader/README.md)构建自己的安装工具，再生成发布包：
+
+```sh
+python3 scripts/build-public-release.py \
+  --output /path/to/NEW-output \
   --binary-dir /path/to/compiled-plugin-directory \
+  --loader-dir /path/to/compiled-loader-tools \
   --secret-config /path/to/private/config.json \
   --secret-config /path/to/private/runtime.json
 ```
 
-脚本拒绝覆写已有目录。输出 `repository/`、两个 ZIP、`audit.json` 及每个目录的 `SHA256SUMS.txt`；有命中时只生成经过脱敏的阻断报告，不生成 ZIP。
+输出目录必须不存在。构建器只从允许清单复制，排除用户数据和本机证据；扫描实际配置里的凭据精确值、密钥模式及本机用户路径。检查 ZIP CRC、内部文件哈希和外部 ZIP 哈希。扫描通过不能替代代码和许可审查。
 
+发布前还应验证依赖下载、本机补丁生成、干净目录安装与重复升级、相对文档链接、下载链接和无凭据归档。GitHub CI 运行 Ubuntu/macOS 可移植测试，不构建依赖游戏程序集的插件，也不自动上传发布物。
 
-## QQ 桥接与公开源码
+## 适用范围与待验证项
 
-QQ 桥接已集成莉莉丝 WebUI。使用指南覆盖模型配置、独立控制台、游戏构建、ComfyUI、DSH、QQ 登录和 OneBot 双向鉴权；群聊额度、说话人与文字引用的限制已写明。公开仓库只从允许清单生成，包含源码和空密钥样例，不包括本机私信草稿、个人账号、登录票据或聊天存档。
+主要实机环境为 Apple Silicon、Rosetta 和 Steam Mac 游戏 1.1.0。Intel、较早 macOS、全新机器从安装到首次进入游戏及长期运行仍需更多验收；不要将隔离副本检查写成完整新机验收。
+
+BepInEx be.790 内含的 CoreCLR 6.0.7 已结束支持，兼容性仍是遗留限制；不能将独立 .NET 8 安装补丁运行时当成游戏加载器运行时已升级。未完成整个第三方运行栈的完整 CVE 审计。
+
+许可与固定版本见[第三方声明](../THIRD-PARTY-NOTICES.md)和[依赖清单](../dependencies-macos.json)。已有版权和素材声明须完整保留。

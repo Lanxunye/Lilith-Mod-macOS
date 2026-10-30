@@ -1,15 +1,26 @@
 {
-  "version": "0.3.4-macos.dev15.1",
+  "version": "0.3.4-macos.dev16",
   "date": "2026-10-30",
   "game_version": "1.1.0",
   "unity_version": "2021.3.45f2",
-  "architecture": "x86_64 via Rosetta",
+  "architecture": "x86_64; Apple Silicon uses Rosetta",
   "bepinex": "6.0.0-be.790+4e98359",
-  "node_tests": 87,
+  "node_tests": 92,
   "managed_tests": 7,
-  "real_deepseek": "passed_game_send_and_history_forcesay_accepted",
-  "dsh": "passed_formal_native_sdk_chat_purge_loaded_delete_confirmation_and_owner_qq_acceptance",
-  "comfy": "passed_local_zimage_qwen4b_autonomous_illustration_sticker_game_preview_png_export",
+  "release_readiness": "online_game_setup_with_locally_patched_loader",
+  "features": {
+    "dsh_chat_only": true,
+    "dsh_tools_enabled": false,
+    "rea_enabled": false,
+    "group_history_limit": 5,
+    "group_member_memory_limit": 4,
+    "group_auto_summary": false,
+    "qq_decision_reasoning": "off",
+    "qq_sticker_reasoning": "off",
+    "vision_cache": true,
+    "usage_meter": "main_and_aux_sdk_events_only",
+    "full_screen_spaces": "unsupported_disabled_by_design"
+  },
   "artifacts": {
     "plugin": {
       "sha256": "f846d2d9d8aeb66715da7fa7bb13d3bda5726ef1920cc60d45b67e1a32670c38"
@@ -22,70 +33,9 @@
     },
     "loader_compat": {
       "sha256": "ea258b8cc7548a4c86edb31b182e8886ebdd6715b84f68f49a4ccc7bd105944e"
+    },
+    "loader_dispatch": {
+      "sha256": "eed68c4f1b0e5608d81b80abb3971fa2ee3f5dd1d637ef7e8c94bed6eeb46cf9"
     }
-  },
-  "long_session_stability": "unverified_input_or_cua_window_issue_after_2h24m",
-  "desktop_window": "passed_primary_screen_transparent_borderless_floating",
-  "comfy_documentation": "COMFYUI.md",
-  "chat_stickers": "passed_real_Unity_chat_and_web_inline_image_rolling_3_turn_limit",
-  "native_chat_editor": "passed_chinese_paste_key_focus_and_edit_shortcuts",
-  "ime_candidate_follow": "passed_user_confirmed_normal",
-  "studio_layout": "passed_menu_move_resize_and_restart_restore_drag_gesture_pending",
-  "ui_fixes_documentation": "输入与画室修复-20261022.md",
-  "dsh_documentation": "DSH.md",
-  "native_deployment_target": "11.0",
-  "release_readiness": "public_console_setup_and_existing_loader_plugin_update",
-  "official_installation": "passed_official_game_tray_registration_mod_menu_and_authenticated_health_after_class_namespace_hotfix",
-  "native_class_namespace_regression": "passed_old_library_negative_control_and_fixed_library_coexistence",
-  "qq": "user_accepted_private_and_group_text_speaker_quote_update_deployed",
-  "qq_desktop_sync": "compiled_not_yet_game_runtime_verified",
-  "spaces_follow": "passed_user_accepted_live_official_game_desktop_spaces_switch",
-  "qq_private_stickers": "passed_user_confirmed_two_real_qq_images_receipts_and_rolling_three_reply_limit",
-  "qq_mind": "implemented_scoped_states_member_boundaries_and_readonly_preview",
-  "qq_private_image_feedback": "passed_isolated_real_model_content_recall_deployed_formal_user_acceptance_pending",
-  "dsh_session_reuse": "per_process_open_session_tracking_with_repeated_turn_and_restart_regression",
-  "dsh_desktop_bridge": {
-    "version": "0.1.2",
-    "tests_passed": 6,
-    "integration": "native_sidebar_panel_shared_journal_context_roundtrip_verified",
-    "projection": "jsonl_and_game_chat_events"
-  },
-  "pet_interactions": {
-    "capture": "readonly_native_log_and_head_gesture_poll",
-    "mood_bonus_daily_cap": 20,
-    "dependency_daily_cap": 2,
-    "reset": "local_midnight_bonus_only",
-    "dependency": "persistent",
-    "bridge_connection": "passed",
-    "real_gesture_acceptance": "passed_owner_head_and_hand_interactions"
-  },
-  "dsh_confirmation_fix": {
-    "ordinary_chat": "no_placeholder_tools",
-    "noop_shell": "denied_without_approval",
-    "confirmation_reply": "current_turn_only"
-  },
-  "qq_sticker_interpretation": "owner_reviewed_playfight_meaning_and_old_delivery_feedback_correction",
-  "qq_group_art": {
-    "trigger": "current_message_explicit_at_and_drawing_request",
-    "daily_limit": 10,
-    "budget_scope": "per_group",
-    "timezone": "Asia/Shanghai",
-    "controls": "owner_private_lls_group_and_draw",
-    "acknowledgement": "contextual_native_dsh_reply_same_group_no_tools"
-  },
-  "art_accuracy": {
-    "pipeline": "native_dsh_scene_and_art_direction_to_approved_comfy_workflow_to_visual_review",
-    "mandatory_scene_design": true,
-    "max_render_attempts": 2,
-    "unchecked_output": "not_delivered"
-  },
-  "qq_private_art": {
-    "enabled_on_formal": true,
-    "trigger": "owner_private_actual_at_or_explicit_prefix",
-    "daily_limit": null,
-    "toggle": "/lls pdraw on|off",
-    "pipeline": "shared_ds_comfy_visual_review"
-  },
-  "original_music_launcher": "passed_user_confirmed_original_menu_and_native_success_reaction",
-  "qq_release_stage": "released"
+  }
 }

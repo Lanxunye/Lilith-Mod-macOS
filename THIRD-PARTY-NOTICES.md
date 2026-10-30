@@ -1,10 +1,10 @@
-# macOS 预览组件声明
+# macOS 组件声明
 
-macOS 源码审查包和插件预览包仅包含 Mod 代码、原生桥接库及原项目许可范围内的素材；不捆绑 BepInEx、修改后的加载器、CoreCLR、Node、游戏程序集、Unity 基础库或绘图模型。它们不是将下列组件重新授权为 MIT。
+macOS 源码包和一键安装包仅包含 Mod 代码、原生桥接库及原项目许可范围内的素材；不捆绑 BepInEx、修改后的加载器、CoreCLR、Node、游戏程序集、Unity 基础库或绘图模型。一键安装器在线下载固定校验值的官方依赖，并在用户本机生成兼容加载器；这些组件仍受各自许可约束，不重新授权为 MIT。
 
 - BepInEx：固定 `6.0.0-be.790+4e98359`，LGPL-2.1；上游源码及许可证：https://github.com/BepInEx/BepInEx/tree/4e98359 。兼容补丁的源码和重建说明在 `loader/`；本预览不分发修改后的 LGPL DLL。
 - Node.js：外部 Node 24，使用其自身许可证；Companion 无第三方 npm 依赖。
-- .NET：加载器捆绑 CLR 6.0.7 x64；开发构建使用 SDK 8。组件遵循 Microsoft 及其第三方条款，不随本预览分发。.NET 6 已结束支持。
+- .NET：加载器捆绑 CLR 6.0.7 x64；安装补丁工具使用 .NET 8.0.32 运行时，开发构建使用 SDK 8。组件遵循 Microsoft 及其第三方条款，不随本 ZIP 分发。.NET 6 已结束支持。
 - DSH：用户自行安装的可选服务，通过 SDK 协议接入，不携带其应用、插件或凭据。
 - ComfyUI 与模型：用户自行准备，不分发 checkpoint、编码器、VAE 或模型许可证。
 - AppKit、Foundation、ApplicationServices、CoreGraphics：系统框架，由用户 macOS 提供。

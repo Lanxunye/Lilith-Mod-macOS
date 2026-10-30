@@ -8,9 +8,9 @@
 
 | 用途 / 工作流节点 | 文件与下载页 | 直接下载 | 放置目录（相对 ComfyUI） | 下载大小 |
 | --- | --- | --- | --- | --- |
-| 绘图主模型 / UNETLoader 66 | [z_image_turbo_bf16.safetensors](https://huggingface.co/Comfy-Org/Z-Image-Turbo/blob/main/split_files/diffusion_models/z_image_turbo_bf16.safetensors) | [下载文件](https://huggingface.co/Comfy-Org/Z-Image-Turbo/resolve/main/split_files/diffusion_models/z_image_turbo_bf16.safetensors?download=true) | `models/diffusion_models/` | 12.31 GB |
-| 文本编码器 / CLIPLoader 62 | [qwen_3_4b.safetensors](https://huggingface.co/Comfy-Org/Z-Image-Turbo/blob/main/split_files/text_encoders/qwen_3_4b.safetensors) | [下载文件](https://huggingface.co/Comfy-Org/Z-Image-Turbo/resolve/main/split_files/text_encoders/qwen_3_4b.safetensors?download=true) | `models/text_encoders/` | 8.04 GB |
-| VAE / VAELoader 63 | [ae.safetensors](https://huggingface.co/Comfy-Org/Z-Image-Turbo/blob/main/split_files/vae/ae.safetensors) | [下载文件](https://huggingface.co/Comfy-Org/Z-Image-Turbo/resolve/main/split_files/vae/ae.safetensors?download=true) | `models/vae/` | 335 MB |
+| 绘图主模型 / UNETLoader 66 | [z_image_turbo_bf16.safetensors](https://huggingface.co/Comfy-Org/Z-Image-Turbo/blob/6fc90a3b1b653e935a0d175e260736de25b84df5/split_files/diffusion_models/z_image_turbo_bf16.safetensors) | [下载文件](https://huggingface.co/Comfy-Org/Z-Image-Turbo/resolve/6fc90a3b1b653e935a0d175e260736de25b84df5/split_files/diffusion_models/z_image_turbo_bf16.safetensors?download=true) | `models/diffusion_models/` | 12.31 GB |
+| 文本编码器 / CLIPLoader 62 | [qwen_3_4b.safetensors](https://huggingface.co/Comfy-Org/Z-Image-Turbo/blob/6fc90a3b1b653e935a0d175e260736de25b84df5/split_files/text_encoders/qwen_3_4b.safetensors) | [下载文件](https://huggingface.co/Comfy-Org/Z-Image-Turbo/resolve/6fc90a3b1b653e935a0d175e260736de25b84df5/split_files/text_encoders/qwen_3_4b.safetensors?download=true) | `models/text_encoders/` | 8.04 GB |
+| VAE / VAELoader 63 | [ae.safetensors](https://huggingface.co/Comfy-Org/Z-Image-Turbo/blob/6fc90a3b1b653e935a0d175e260736de25b84df5/split_files/vae/ae.safetensors) | [下载文件](https://huggingface.co/Comfy-Org/Z-Image-Turbo/resolve/6fc90a3b1b653e935a0d175e260736de25b84df5/split_files/vae/ae.safetensors?download=true) | `models/vae/` | 335 MB |
 
 以上三个权重合计约 **20.69 GB（十进制）**。还需为环境、输出和运行缓存留出空间；下载文件大小不等于推理需要的内存。不要整库下载其他精度、LoRA 或重复模型，也不要将 HTML 错误页改名为 `.safetensors`。
 
@@ -26,7 +26,7 @@ ComfyUI/models/vae/ae.safetensors
 
 ### 可复现下载与校验
 
-[`packaging/models.json`](../packaging/models.json) 保存了本次核对的仓库提交、固定版本下载 URL、字节数及 SHA-256。上表的 `main` 链接方便打开；希望避免远端更新时，使用该清单里的固定提交 URL。
+[`packaging/models.json`](../packaging/models.json) 保存了本次核对的仓库提交、固定版本下载 URL、字节数及 SHA-256。上表与清单均使用固定提交 URL，避免远端更新后下载到不同文件。
 
 下载完成后可用 `shasum -a 256 <文件路径>` 与清单中的 `sha256` 逐项比较；若大小或哈希不符，先重新下载或核对远端版本，不要加载不明文件。Hugging Face 可能需要网络访问或账号权限；本项目不提供未知镜像，也不代替用户接受模型条款。
 

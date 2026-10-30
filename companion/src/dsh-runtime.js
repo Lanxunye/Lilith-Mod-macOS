@@ -95,7 +95,7 @@ class DshRuntime {
   }
 }
 function textBlocks(value) {
-  if (typeof value === 'string') return value;
-  return Array.isArray(value) ? value.filter(b => b?.type === 'text').map(b => b.text || '').join('\n') : '';
+  const text=typeof value==='string'?value:Array.isArray(value)?value.filter(b=>b?.type==='text').map(b=>b.text||'').join('\n'):'';
+  return require('./visible-reply').stripReasoningText(text);
 }
 module.exports = {DshRuntime, textBlocks};

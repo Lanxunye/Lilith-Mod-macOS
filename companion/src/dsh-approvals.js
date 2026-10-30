@@ -20,8 +20,11 @@ class DshApprovals{
   if(input.trusted_readonly===true&&input.readonly_policy==='lilith-readonly-v1'&&['lilith_read','lilith_list'].includes(input.tool_name))return grant();
   const approved=this.records.find(r=>r.state==='approved'&&r.session_id===input.session_id&&r.tool_name===input.tool_name&&r.arguments_sha256===hash&&r.expires_at>this.now());
   if(approved){approved.state='consumed';approved.consumed_at=this.now();this.save();return grant();}
-  let r=this.records.find(r=>r.state==='pending'&&r.session_id===input.session_id&&r.tool_name===input.tool_name&&r.arguments_sha256===hash&&r.expires_at>this.now());
+  let r=this.records.find(r=>r.state==='pending'&&r.conversation===c.conversation&&r.channel===c.channel&&r.tool_name===input.tool_name&&r.arguments_sha256===hash&&r.expires_at>this.now());
   if(!r){r={id:crypto.randomBytes(5).toString('hex'),challenge:crypto.randomBytes(3).toString('hex'),session_id:input.session_id,conversation:c.conversation,channel:c.channel,tool_name:input.tool_name,arguments:input.arguments,arguments_sha256:hash,workspace:this.workspace,state:'pending',created_at:this.now(),expires_at:this.now()+10*60*1000};this.records.push(r);}
+  // Only an actual guarded re-request may move a pending operation to a fresh
+  // native turn. An approved operation stays pinned and cannot be transferred.
+  r.session_id=input.session_id;
   // A pending operation may be requested again, but only that originating turn
   // may replace its reply with a confirmation prompt. Old pending items stay in UI.
   r.last_requested_turn=c.approvalTurn||null;this.save();

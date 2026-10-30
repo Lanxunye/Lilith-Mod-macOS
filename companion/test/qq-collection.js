@@ -19,7 +19,7 @@ const {ConversationStore}=require('../src/conversation-store'),{createQQBridge}=
   assert.equal(event(4).accepted,true);assert.equal(event(4).duplicate,true);await bridge.tick();assert.equal(visionCalls,1);assert.equal(bridge.status().owner_sticker_count,1);assert.equal(bridge.status().collection_status.stickers,1);
   assert.deepEqual(actions,['get_msg']);assert.equal(store.messages('desktop-pet').length,0);assert.equal(bridge.status().group_daily_used,0);
   assert.equal(bridge.mirror('desktop','private text',{text:'reply'},'desktop-pet'),null);assert.equal(bridge.mirror('qq','private text',{text:'reply'},'desktop-pet'),null);
-  sticker=false;assert.equal(event(5).accepted,true);await bridge.tick();assert.equal(bridge.status().owner_sticker_count,1,'ordinary images do not become stickers');
+  sticker=false;bridge.configure({vision_api_key:'private-fixture-v2'});assert.equal(event(5).accepted,true);await bridge.tick();assert.equal(bridge.status().owner_sticker_count,1,'ordinary images do not become stickers');
   protocolSticker=true;event(7);await bridge.tick();assert.equal(bridge.status().collection_status.stickers,1,'owner-curated QQ custom stickers remain stickers even if appearance classifier disagrees');
   bridge.configure({collection_only:false});assert.equal(event(6).accepted,false,'all intake stops when paused and collection is off');
   console.log('qq-collection: mute all replies, owner-only private images, media classification/cache, dedup, no generation/probe/send/group processing, no budget use, no mirroring and cancelled stale deliveries passed.');

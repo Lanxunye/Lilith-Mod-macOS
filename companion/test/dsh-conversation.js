@@ -29,7 +29,7 @@ let app,runs=[],sent=[];
  a.enter('group',{channel:'qq_group',conversation:'group',tools:false});assert.equal(a.request({...input,session_id:'group',trusted_readonly:true}).approved,false);
  a.leave('session-a');assert.equal(a.request(input).approved,false);
  const {createApp}=require('../src/server');
- app=createApp({dshConversationOptions:{workspace,prepareProfile:()=>({profile:'fixture',env:{},status:{auth_configured:true}}),runtimeFactory:options=>({ready:Promise.resolve(),exited:false,async run(id,prompt){
+ app=createApp({dshConversationOptions:{chatOnly:false,workspace,prepareProfile:()=>({profile:'fixture',env:{},status:{auth_configured:true}}),runtimeFactory:options=>({ready:Promise.resolve(),exited:false,async run(id,prompt){
    runs.push({id,prompt});let response={text:'记得，我们刚说到画稿。',emotion:'happy',animation:'smile',memory_updates:[]};
    const current=JSON.parse(prompt.match(/"current_user_message":("(?:\\.|[^"\\])*")/)?.[1]||'""');
    if(prompt.includes('只从对话档案抽取'))response={excerpts:[]};
@@ -40,7 +40,10 @@ let app,runs=[],sent=[];
     assert.equal(app.dsh.approvals.request({session_id:id,call_id:'noop',request_id:'request-noop',tool_name:'bash',arguments:args,arguments_sha256:digest(args),workspace}).reason,'LILITH_NOOP_TOOL_REJECTED');
    }
    options.onEvent('session.event',{sessionId:'another-session',event:{type:'assistant/message',data:{content:'wrong-session-content'}}});
-   options.onEvent('session.event',{sessionId:id,event:{type:'assistant/message',data:{content:JSON.stringify(response)}}});
+   let encoded=JSON.stringify(response);
+   if(current==='连续JSON修复测试')encoded='<think>private reasoning</think>'+encoded+'\n'+JSON.stringify({...response,text:'最后的台词。',messages:[{text:'最后的台词。'}]});
+   if(current==='截断JSON修复测试')encoded='{"text":"不能显示的未完成结构';
+   options.onEvent('session.event',{sessionId:id,event:{type:'assistant/message',data:{content:encoded}}});
    options.onEvent('session.event',{sessionId:id,event:{type:'turn/end',data:{reason:{kind:'completed'}}}});
   },async close(){this.exited=true;},async stop(){this.exited=true;}})},qqOptions:{autoTick:false,request:async(url,init)=>{sent.push(JSON.parse(init.body));return {ok:true,json:async()=>({status:'ok',retcode:0,data:{message_id:sent.length}})};}}});
  await new Promise(r=>app.server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+app.server.address().port;
@@ -72,6 +75,24 @@ let app,runs=[],sent=[];
  await api('/v1/session/desktop-pet/message',{request_id:'confirm1',message:app.dsh.approvals.phrase(p)});
  assert.match(runs.at(-1).prompt,/主人刚刚再次明确确认/);
  assert.equal(app.dsh.approvals.records.find(r=>r.id===p.id).state,'consumed');
+ r=await api('/v1/session/desktop-pet/message',{request_id:'dsh-desktop:visible-fix',message:'连续JSON修复测试'});
+ assert.equal(r.data.text,'最后的台词。');assert.equal(r.data.status,'ok');
+ const fixedProjection=JSON.parse(fs.readFileSync(path.join(root,'shared-chat-events.json'),'utf8'));
+ assert.ok(fixedProjection.messages.filter(m=>m.role==='assistant').every(m=>!m.content.includes('private reasoning')&&!m.content.startsWith('{')));
+ r=await api('/v1/session/desktop-pet/message',{request_id:'invalid-json',message:'截断JSON修复测试'});
+ assert.equal(r.data.status,'fallback');assert.doesNotMatch(r.data.text,/未完成结构|"text"/);
+ app.store.db.prepare('INSERT INTO messages VALUES (NULL,?,?,?,?,?,?,?,?)').run('historical-json','desktop-pet','historical-invalid','desktop','assistant','{"text":"不能显示的历史结构',new Date().toISOString(),'fixture');
+ for(const route of ['history','events']){
+  const view=await api('/v1/session/desktop-pet/'+route);
+  assert.ok(view.data.messages.filter(m=>m.role==='assistant').every(m=>!m.content.includes('不能显示的历史结构')));
+ }
+ assert.equal(app.store.db.prepare('SELECT content FROM messages WHERE id=?').get('historical-json').content,'{"text":"不能显示的历史结构','raw archive stays unchanged');
+ app.store.begin('cache-case','cached',{message:'缓存测试',channel:'desktop',player:'',mode:'',task_mode:'',locale:''});
+ const oldResult={request_id:'cached',status:'ok',text:'{"text":"不能显示的旧缓存',ui:{emotion:'happy'}};
+ app.store.db.prepare("UPDATE turns SET state='done',result=? WHERE session='cache-case' AND request_id='cached'").run(JSON.stringify(oldResult));
+ r=await api('/v1/session/cache-case/message',{request_id:'cached',message:'缓存测试'});
+ assert.equal(r.data.status,'fallback');assert.doesNotMatch(r.data.text,/旧缓存|"text"/);
+ assert.deepEqual(JSON.parse(app.store.db.prepare("SELECT result FROM turns WHERE session='cache-case' AND request_id='cached'").get().result),oldResult);
  const owner='111111',bot='222222';await api('/v1/qq',{enabled:true,paused:false,owner_qq:owner,bot_qq:bot,api_url:'http://127.0.0.1:1',api_token:'fixture',event_secret:'fixture-secret',min_interval_ms:1000},'PATCH');
  const crypto=require('node:crypto');const raw=JSON.stringify({post_type:'message',message_type:'private',sub_type:'friend',user_id:Number(owner),self_id:Number(bot),message_id:1,message:[{type:'text',data:{text:'你还记得画稿吗'}}]});
  assert.equal(app.qq.accept(raw,'sha1='+crypto.createHmac('sha1','fixture-secret').update(raw).digest('hex')).accepted,true);await app.qq.tick();assert.equal(sent.length,1);assert.match(runs.at(-1).prompt,/画稿/);assert.match(runs.at(-1).prompt,/本轮工具权限：绑定主人/);

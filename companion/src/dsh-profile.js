@@ -38,7 +38,7 @@ function pluginRows(text) {
       const start = block.findIndex(l => /^\s+config:\s*(?:#.*)?$/.test(l));
       const config = start < 0 ? [] : block.slice(start + 1).filter(l => !/^\s*$|^\s*#/.test(l));
       const normalized = config.map(l => l.slice(Math.min(l.length, indent + 4)));
-      rows.push({ name, id: TRUSTED.get(name), config: normalized });
+      rows.push({ name, id: TRUSTED.get(name), sourceId: id, config: normalized });
     }
   }
   return rows;
@@ -100,7 +100,7 @@ function seedModuleLinks(io, sourceModules, modules, manifest) {
  * path and never opened, copied, printed, or converted into an environment key.
  * fsImpl/osHome support isolated fixture tests without touching the real user.
  */
-function prepareDshProfile({home, workspace, sourceHome, guardPlugin, guardEndpoint, guardToken, persona, searchPlugin,
+function prepareDshProfile({home, workspace, sourceHome, guardPlugin, guardEndpoint, guardToken, persona, searchPlugin, auxiliary = false, chatOnly = false,
   fsImpl = fs, osHome = os.homedir(), profile = 'lilith'} = {}) {
   const io = fsImpl;
   for (const value of [home, workspace, guardPlugin]) if (typeof value !== 'string' || !path.isAbsolute(value)) fail('dsh_profile_absolute_path_required');
@@ -124,7 +124,8 @@ function prepareDshProfile({home, workspace, sourceHome, guardPlugin, guardEndpo
   const sdkPatch = readOptional(io, path.join(nativeSdk, 'cordis.patch.yml'), '[]\n');
   if (!seeded && !io.existsSync(localPatchPath) && !safeConfig(sdkPatch.split(/\r?\n/).filter(l=>!l.trimStart().startsWith('#')))) fail('dsh_native_sdk_patch_requires_review');
   const desktopPatch = readOptional(io, path.join(sourceHome, 'profiles', 'desktop', 'cordis.patch.yml'));
-  const rows = pluginRows(desktopPatch), trusted = rows.filter(r => safeConfig(r.config));
+  const isRea = r => r.id === 'mcp' && /(?:serverName:\s*['"]?rea\b|[\\/]rea(?:[\\/]|\b)|rea-agents|rea\.mjs)/i.test(r.config.join('\n'));
+  const rows = pluginRows(desktopPatch), trusted = rows.filter(r => safeConfig(r.config) && !isRea(r) && (!(auxiliary||chatOnly) || r.id !== 'mcp'));
   const localPatchExists = io.existsSync(localPatchPath), existingLocalPatch = readOptional(io, localPatchPath);
   // Native defaults seed the independent user layer once. Existing local edits
   // follow those defaults and retain precedence; later prepares never rewrite it.
@@ -193,13 +194,25 @@ function prepareDshProfile({home, workspace, sourceHome, guardPlugin, guardEndpo
   patch += '- insert:\n    - id: lilith-safety-guard\n      name: ' + QUOTE(guardPlugin) + '\n';
   patch += '- id: lilith-safety-guard\n  disabled: false\n  name: ' + QUOTE(guardPlugin) + '\n';
   patch += '- id: tools\n  disabled: false\n';
+  // Execution denial alone does not remove tool schemas or stop an MCP child.
+  // Disable REA at the loader, including an already seeded user layer. Never
+  // rewrite the ordinary desktop profile or its MCP processes.
+  const disabledMcp = pluginRows(userPatch).filter(r => r.id === 'mcp' && (auxiliary || chatOnly || isRea(r)));
+  for (const row of disabledMcp) {
+    if (!row.sourceId || !/^[\w.-]+$/.test(row.sourceId)) fail('dsh_mcp_disable_id_required');
+    patch += '- id: ' + row.sourceId + '\n  disabled: true\n';
+  }
+  if (auxiliary || chatOnly) {
+    const disabled = ['tool-plugin-manager','tool-bash','tool-pwsh','tool-jobs','tool-fs','tool-fs-search','tool-working-directory','tool-web','tool-skill','skill-filesystem','tool-subagent','tool-subagent-fork','tool-subagent-control','tool-subagent-list-agents','tool-workflow','tool-todo','tool-goal','agent-instructions','plan-mode','workspace-dependencies','skill-office','session-title-llm','session-telemetry-otel'];
+    patch += disabled.map(id => '- id: ' + id + '\n  disabled: true\n').join('');
+  }
   if(searchPlugin){
     if(!path.isAbsolute(searchPlugin)||!io.existsSync(searchPlugin))fail('lilith_search_plugin_missing');
     patch += '- insert:\n    - id: lilith-native-search\n      name: '+QUOTE(searchPlugin)+'\n';
     patch += '- id: tool-web\n  disabled: true\n'; // Search is host-mediated and budgeted, never a model tool bypass.
   }
-  if(purge)patch += '- id: dsh-purge\n  disabled: false\n';
-  patch += '- id: sdk-jsonrpc-server\n  disabled: false\n  name: "@deepseek-ai/dsh-sdk-jsonrpc-server"\n  inject: [sdkAppStartup, loader, lilithGuardReady'+(searchPlugin?', lilithSearchReady':'')+(purge?', lilithPurgeReady':'')+(mood?', lilithMoodReady':'')+(memory?', lilithMemoryReady':'')+(speak?', lilithSpeakUpReady':'')+(bili?', lilithBiliReady':'')+']\n';
+  if(purge)patch += '- id: dsh-purge\n  disabled: '+(chatOnly?'true':'false')+'\n';
+  patch += '- id: sdk-jsonrpc-server\n  disabled: false\n  name: "@deepseek-ai/dsh-sdk-jsonrpc-server"\n  inject: [sdkAppStartup, loader, lilithGuardReady'+(searchPlugin?', lilithSearchReady':'')+(purge&&!chatOnly?', lilithPurgeReady':'')+(mood?', lilithMoodReady':'')+(memory?', lilithMemoryReady':'')+(speak?', lilithSpeakUpReady':'')+(bili?', lilithBiliReady':'')+']\n';
   const patchFile = path.join(home, 'lilith.patch.yml');
   writeOwned(io, patchFile, patch);
   if (!seeded) writeOwned(io, markerPath, '{"version":1}\n');
@@ -211,9 +224,10 @@ function prepareDshProfile({home, workspace, sourceHome, guardPlugin, guardEndpo
       LILITH_DSH_GUARD_URL: endpoint.href, LILITH_DSH_GUARD_TOKEN: guardToken},
     status: {auth_configured: authConfigured, auth_verified: false, native_sdk_present: io.existsSync(path.join(nativeSdk, 'package.json')),
       native_dependency_count: Object.keys(manifest.dependencies || {}).length, bundle_count: bundles.length, native_model_selected: nativeModelSelected,
-      migrated_plugin_count: trusted.length, mcp_count: trusted.filter(r => r.id === 'mcp').length,
+      migrated_plugin_count: trusted.length, mcp_count: pluginRows(userPatch).filter(r=>r.id==='mcp'&&!isRea(r)&&!auxiliary&&!chatOnly).length,
+      chat_only:chatOnly, tools_disabled:auxiliary||chatOnly, rea_disabled: true, rea_disabled_instances: disabledMcp.filter(isRea).length, auxiliary_profile: auxiliary,
       skipped_plugin_count: rows.length - trusted.length, local_profile_preserved: localManifestExists,
-      purge:purge?{installed:true,version:purge.version,adaptation:purge.lilithAdaptation.adaptation,readiness_required:true,host_patches_applied:false}:{installed:false},
+      purge:purge?{installed:true,enabled:!chatOnly,status:chatOnly?'disabled_chat_only':'pending',version:purge.version,adaptation:purge.lilithAdaptation.adaptation,readiness_required:true,host_patches_applied:false}:{installed:false},
       mood:mood?{installed:true,version:mood.version,adaptation:mood.lilithAdaptation.adaptation,readiness_required:true}:{installed:false},
       memory:memory?{installed:true,version:memory.version,adaptation:memory.lilithAdaptation.adaptation,readiness_required:true}:{installed:false},
       speak_up:speak?{installed:true,version:speak.version,adaptation:speak.lilithAdaptation.adaptation,readiness_required:true}:{installed:false},

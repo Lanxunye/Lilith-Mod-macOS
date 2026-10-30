@@ -40,7 +40,7 @@
 安装或固定 Node、BepInEx、.NET或 PowerShell 7；设置窗口使用 Windows 10/11
 系统自带的 Windows PowerShell 5.1。
 
-详细步骤参见 [安装、升级与卸载](../../docs/installation.md)。
+详细步骤参见 [安装、升级与卸载](installation.windows.zh-CN.md)。
 
 ## Gemini 与 Google Search
 

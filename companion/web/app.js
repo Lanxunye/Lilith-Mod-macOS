@@ -274,8 +274,10 @@ if(location.pathname.endsWith('/qq'))qqLoad().catch(e=>notice(e.message));
 
 async function dshLoad(){
  const state=await api('/v1/dsh');
- $('dsh-state').textContent=state.engine==='dsh'?`DSH：${state.status} · ${state.workspace} · MCP ${state.mcp_count??'待初始化'} 个；认证由 DSH 管理。Purge：${state.purge?.status||'待加载'}。`:'兼容测试引擎';
- const box=$('dsh-approvals'),signature=JSON.stringify(state.pending||[]);
+ $('dsh-state').textContent=state.engine==='dsh'?`DSH：${state.status} · ${state.workspace} · ${state.tools_disabled?'纯聊天，全部工具已禁用':'工具模式'} · MCP ${state.mcp_count??'待初始化'} 个；REA ${state.rea_disabled?'已禁用':'待检查'}。认证由 DSH 管理。Purge：${state.purge?.status||'待加载'}。`:'兼容测试引擎';
+ const cost=state.cost_control,usage=Object.values(cost?.by_module||{}).reduce((sum,row)=>{sum.calls+=row.calls||0;sum.fresh+=row.inputTokens||0;sum.cache+=row.cacheReadTokens||0;sum.output+=row.outputTokens||0;return sum;},{calls:0,fresh:0,cache:0,output:0});
+ if($('dsh-cost'))$('dsh-cost').textContent=cost?`今日 SDK 用量（${cost.day}）：${usage.calls} 次 · 未缓存输入 ${usage.fresh.toLocaleString()} · 缓存输入 ${usage.cache.toLocaleString()} · 输出 ${usage.output.toLocaleString()} token。仅统计本次升级后主聊天与辅助任务；不含插件内部判断、独立阅读、识图和搜索费用。${cost.circuit?' 服务错误冷却中，可在修复后点“连接 DSH”重试。':''}`:'';
+ const box=$('dsh-approvals'),signature=JSON.stringify(state.pending||[]);box.hidden=state.tools_disabled===true;
  if(box.dataset.signature===signature)return;box.dataset.signature=signature;box.replaceChildren();
  for(const r of state.pending||[]){
   const card=document.createElement('article'),title=document.createElement('h3'),details=document.createElement('pre'),hint=document.createElement('p'),phrase=document.createElement('code'),entry=document.createElement('input'),approve=document.createElement('button'),deny=document.createElement('button');

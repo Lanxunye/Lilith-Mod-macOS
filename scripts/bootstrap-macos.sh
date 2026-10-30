@@ -20,7 +20,7 @@ if [ ! -x "$CACHE/bin/node" ]; then
   mkdir -p "$(dirname "$CACHE")"
   TEMP="$(mktemp -d "$(dirname "$CACHE")/.node-download.XXXXXX")"
   trap 'rm -rf "$TEMP"' EXIT
-  curl --fail --location --proto '=https' --tlsv1.2 --connect-timeout 15 --max-time 600 --retry 2 \
+  curl --fail --location --proto '=https' --proto-redir '=https' --tlsv1.2 --connect-timeout 15 --max-time 600 --retry 2 \
     "https://nodejs.org/dist/v24.22.1/node-v24.22.1-darwin-$ARCH.tar.gz" -o "$TEMP/node.tar.gz"
   ACTUAL="$(shasum -a 256 "$TEMP/node.tar.gz" | awk '{print $1}')"
   [ "$ACTUAL" = "$EXPECTED" ] || { echo 'Node 下载校验失败，未执行下载内容。'; exit 1; }

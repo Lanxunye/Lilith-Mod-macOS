@@ -1,5 +1,6 @@
 'use strict';
 const {intentFor}=require('./sticker-selection');
+const {groupFacts}=require('./qq-group-context');
 const {wantsVideoLink,isVideoUrl,stripVideoLinks}=require('./bili-links');
 const fs=require('node:fs');
 const path=require('node:path');
@@ -221,7 +222,7 @@ function createQQBridge({root,store,chat,getPlayerName,request=fetch,autoTick=tr
   }
   async function probe(){const identity=await api('get_login_info',{});if(String(identity?.user_id)!==cfg.bot_qq)throw fault('qq_bot_identity_mismatch');return {ok:true,bot_qq:String(identity.user_id)};}
   const socialState=group=>store.db.prepare('SELECT * FROM qq_social_state WHERE bot=? AND group_id=?').get(cfg.bot_qq,group);
-  function context(group){return store.db.prepare('SELECT body FROM qq_observed WHERE bot=? AND group_id=? ORDER BY created_ms DESC,rowid DESC LIMIT 10').all(cfg.bot_qq,group).reverse().map(r=>{const b=JSON.parse(r.body);return {speaker:b.speaker,text:b.text,message_id:b.message_id,reply_id:b.reply_id};});}
+  function context(group){return store.db.prepare('SELECT body,created_ms FROM qq_observed WHERE bot=? AND group_id=? ORDER BY created_ms DESC,rowid DESC LIMIT 5').all(cfg.bot_qq,group).reverse().map(r=>{const b=JSON.parse(r.body);return {speaker:b.speaker,text:b.text,message_id:b.message_id,reply_id:b.reply_id,created_ms:r.created_ms};});}
   function expireTopics(){store.db.prepare("UPDATE qq_social_state SET active=0,topic='',sticker_streak=0 WHERE bot=? AND active=1 AND MAX(last_inbound,last_sent)<?").run(cfg.bot_qq,now().getTime()-cfg.topic_idle_seconds*1000);}
   function maybeWake(){
     if(!cfg.group_enabled||!cfg.random_wake_enabled&&!cfg.idle_topic_enabled||used()>=100)return;
@@ -289,7 +290,7 @@ function createQQBridge({root,store,chat,getPlayerName,request=fetch,autoTick=tr
           if(b.group){
             const groupData=JSON.parse(message.slice(message.indexOf('\n')+1));b.member_ids=[b.speaker?.qq,groupData.quote?.speaker?.qq,...(b.mentions||[])].filter(Boolean);
             mindInput.current=groupData;mindInput.reply_to_bot=groupData.quote?.status==='available'&&groupData.quote.speaker?.qq===cfg.bot_qq;
-            const input={scope:'group:'+b.group,force:b.force===true,opportunity:b.opportunity||null,current:JSON.parse(message.slice(message.indexOf('\n')+1)),recent:context(b.group),memory:store.groupMemberFacts(b.session,b.member_ids).slice(-20).map(({key,value})=>({key,value})),self_recent:store.db.prepare('SELECT text,state FROM outbox WHERE target=? ORDER BY rowid DESC LIMIT 4').all('group:'+b.group),topic:st?.active?st.topic:'',stickers:capabilities.stickers('group:'+b.group,(b.text||'')+' '+(st?.topic||'')+' '+JSON.stringify(b.images?.items||[]),{current:b.text||'',recent:context(b.group)})};
+            const input={scope:'group:'+b.group,force:b.force===true,opportunity:b.opportunity||null,current:JSON.parse(message.slice(message.indexOf('\n')+1)),recent:context(b.group),memory:groupFacts(store.groupMemberFacts(b.session,b.member_ids),b.member_ids),self_recent:store.db.prepare('SELECT text,state FROM outbox WHERE target=? ORDER BY rowid DESC LIMIT 4').all('group:'+b.group),topic:st?.active?st.topic:'',stickers:capabilities.stickers('group:'+b.group,(b.text||'')+' '+(st?.topic||'')+' '+JSON.stringify(b.images?.items||[]),{current:b.text||'',recent:context(b.group)})};
             mindInput.stickers=input.stickers;mind.observe(mindInput,mindContext);
             if(cfg.mind_mode==='active')input.mind=mind.snapshot(mindInput.scope,mindInput.member,mindContext);
             if(mind.preflight(mindInput,mindContext))action={action:'skip'};

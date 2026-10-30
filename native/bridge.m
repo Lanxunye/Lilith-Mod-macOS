@@ -121,14 +121,13 @@ void *lilith_player_window(void) {
     return NULL;
 }
 
-// Ordinary desktop Spaces share one pet window. Do not move the window's
-// frame or steal focus, and do not alter floating/click-through/fullscreen policy.
+// Follow ordinary desktop Spaces only. Preserve the game's full-screen exclusion
+// and application policy: overlaying other apps' full-screen Spaces is unsupported.
 int lilith_follow_spaces(void *handle) {
     if (![NSThread isMainThread]) return 0;
     NSWindow *window = (__bridge NSWindow *)handle;
     if (!window || ![[NSApp windows] containsObject:window]) return 0;
     NSWindowCollectionBehavior previous = window.collectionBehavior;
-    // AppKit defines these two behaviors as mutually exclusive.
     NSWindowCollectionBehavior next = (previous & ~NSWindowCollectionBehaviorMoveToActiveSpace)
         | NSWindowCollectionBehaviorCanJoinAllSpaces;
     if (previous != next) window.collectionBehavior = next;

@@ -4,5 +4,5 @@
   "channel": "macos-dev",
   "upstream_repository": "cza2019/The-NOexistenceN-of-Lilith-Mod",
   "macos_repository": "Lanxunye/Lilith-Mod-macOS",
-  "local_build": "0.3.4-macos.dev15.1"
+  "local_build": "0.3.4-macos.dev16"
 }

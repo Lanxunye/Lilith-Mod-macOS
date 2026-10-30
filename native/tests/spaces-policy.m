@@ -18,7 +18,7 @@ int main(int argc, const char **argv) {
         window.releasedWhenClosed=NO;
         window.ignoresMouseEvents=YES;
         window.level=NSFloatingWindowLevel;
-        window.collectionBehavior=NSWindowCollectionBehaviorMoveToActiveSpace|NSWindowCollectionBehaviorStationary;
+        window.collectionBehavior=NSWindowCollectionBehaviorMoveToActiveSpace|NSWindowCollectionBehaviorStationary|NSWindowCollectionBehaviorFullScreenNone;
         NSRect frame=window.frame;
         if (!follow((__bridge void *)window)) return 3;
         if (!(window.collectionBehavior & NSWindowCollectionBehaviorCanJoinAllSpaces)
@@ -26,12 +26,14 @@ int main(int argc, const char **argv) {
             || !(window.collectionBehavior & NSWindowCollectionBehaviorStationary)) return 4;
         if (!NSEqualRects(frame,window.frame)||!window.ignoresMouseEvents
             ||window.level!=NSFloatingWindowLevel||window.visible||window.keyWindow) return 5;
+        if (!(window.collectionBehavior & NSWindowCollectionBehaviorFullScreenNone)
+            || (window.collectionBehavior & NSWindowCollectionBehaviorFullScreenAuxiliary)) return 8;
         // Reassert after game code resets the behavior, without changing focus/frame.
         window.collectionBehavior=NSWindowCollectionBehaviorDefault;
         if (!follow((__bridge void *)window)||!follow((__bridge void *)window)) return 6;
         if (!NSEqualRects(frame,window.frame)||window.visible||window.keyWindow) return 7;
         [window close];
-        puts("Spaces policy: follows ordinary desktop Spaces, removes conflicting flag, preserves other flags/frame/level/click-through/focus, restores after reset.");
+        puts("Spaces policy: ordinary desktops only, full-screen exclusion preserved, geometry/level/input/focus unchanged and reset recovery passed.");
         return 0;
     }
 }

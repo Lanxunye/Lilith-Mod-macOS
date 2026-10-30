@@ -11,8 +11,8 @@ def main():
  out=a.output.resolve();out.mkdir(parents=True,exist_ok=False);repo=out/'repository';repo.mkdir()
  review.SKIP.update({'.local-state','dist','coverage','screenshots','logs','.env'})
  for name in review.DIRECTORIES+['dsh-desktop-bridge','dsh-bili-subagent-lilith','packaging']:review.copy_tree(ROOT/name,repo/name)
- for name in review.FILES+['MACOS.md','macos-release.json','一键部署.command','安装游戏插件.command']:review.copy(ROOT/name,repo/name)
- for name in review.SCRIPTS+['build-public-release.py','bootstrap-macos.sh','install-macos.cjs','music-cli.cjs']:review.copy(ROOT/'scripts'/name,repo/'scripts'/name)
+ for name in review.FILES+['MACOS.md','macos-release.json','一键部署.command','安装游戏插件.command','一键安装Mod.command','下载基础依赖.command','重启聊天后台.command']:review.copy(ROOT/name,repo/name)
+ for name in review.SCRIPTS+['build-public-release.py','bootstrap-macos.sh','install-macos.cjs','music-cli.cjs','prepare-game-loader.cjs','build-installer-tools.sh','verify-cost-control.cjs','verify-decision-recovery.cjs','restart-services.cjs']:review.copy(ROOT/'scripts'/name,repo/'scripts'/name)
  # Keep the already-reviewed Purge adaptation and its own MIT notices, not node_modules or private backups.
  purge=ROOT.parent/'dsh-purge-lilith'
  if not purge.exists():purge=ROOT/'dsh-purge-lilith'
@@ -21,10 +21,14 @@ def main():
  for name in ['DSH.md','DSH接入设计-20261022.md']:
   import re
   f=repo/name;f.write_text(re.sub(r'\[([^\]]+)\]\(evidence/[^)]+\)',r'\1（本机验收材料未公开）',f.read_text()))
+ (repo/'DSH接入设计-20261022.md').unlink()  # Historical tool-enabled design is not the current player contract.
+ public_docs={'deployment-macos.md','usage.md','dependencies.md','models.md','dialogue-cost-control.md','qq-commands.md','qq-group-art.md','sticker-selection.md','chat-speech.md','web-search.md','music-learning.md','bili-learning.md','pet-affection.md','startup-services.md','macos-preview.md','release-macos-preflight.md','qq-image-flow.md','host-awareness.md','owner-public-memory.md','art-accuracy.md','qq-mind.md','weather.md','lilith-expression.md','lilith-original-style.md','memory-baseline.md','player-character-card.md','player-name.md','qq-private-art.md','reply-parts.md','role-sources.md','release-notes-macos-dev16.md','release-notes-macos-dev15.1.md','release-notes-macos-dev15.md','release-notes-v0.2.0.md','release-notes-v0.3.0.md','release-notes-v0.3.1.md','release-notes-v0.3.2.md','release-notes-v0.3.3.md','release-notes-v0.3.4.md','show.gif','meme-interpretation.md','macos-music-launch.md'}
+ for f in (repo/'docs').rglob('*'):
+  if f.is_file() and f.relative_to(repo/'docs').parts[0]!='upstream' and f.name not in public_docs:f.unlink()
  metadata=json.loads((repo/'macos-release.json').read_text())
  metadata={k:v for k,v in metadata.items() if not k.endswith('_evidence') and k not in ['desktop_window_evidence']}
  metadata['artifacts']={k:{'sha256':review.digest(a.binary_dir/name)} for k,name in [('plugin','LilithMod.dll'),('native_bridge','liblilith_macos.dylib')]}
- for key,name in [('loader','BepInEx.Unity.IL2CPP.dll'),('loader_compat','LilithLoaderCompat.dll')]:metadata['artifacts'][key]={'sha256':review.digest(a.loader_dir/name)}
+ for key,name in [('loader','BepInEx.Unity.IL2CPP.dll'),('loader_compat','LilithLoaderCompat.dll'),('loader_dispatch','liblilith_probe_dispatch.dylib')]:metadata['artifacts'][key]={'sha256':review.digest(a.loader_dir/name)}
  # Nested evidence pointers are local validation notes, never a dependency of the installer.
  def clean(v):
   if isinstance(v,dict):return {k:clean(x) for k,x in v.items() if k!='evidence'}
@@ -35,6 +39,8 @@ def main():
  if findings:(out/'audit-failed.json').write_text(json.dumps(findings,ensure_ascii=False,indent=2));raise SystemExit('Source audit blocked; see audit-failed.json')
  setup=out/'setup';shutil.copytree(repo,setup)
  for name in ['LilithMod.dll','liblilith_macos.dylib']:review.copy(a.binary_dir/name,setup/'payload'/name)
+ for name in ['LilithLoaderCompat.dll','liblilith_probe_dispatch.dylib']:review.copy(a.loader_dir/name,setup/'payload'/name)
+ for name in ['LoaderPatcher.dll','LoaderPatcher.deps.json','LoaderPatcher.runtimeconfig.json']:review.copy(a.loader_dir/'installer-tools'/name,setup/'payload/loader-tools'/name)
  findings=review.audit(setup,secrets)
  if findings:(out/'audit-failed.json').write_text(json.dumps(findings,ensure_ascii=False,indent=2));raise SystemExit('Setup audit blocked; see audit-failed.json')
  review.sums(repo);review.sums(setup)
@@ -42,6 +48,6 @@ def main():
  for tree,suffix in [(repo,'source'),(setup,'setup')]:
   file=out/f'Lilith-Mod-{version}-macOS-{suffix}.zip';review.archive(tree,file);archives.append({'name':file.name,'bytes':file.stat().st_size,'sha256':review.digest(file)})
  (out/'SHA256SUMS.txt').write_text(''.join(x['sha256']+'  '+x['name']+'\n' for x in archives))
- result={'version':version,'secret_findings':0,'archives':archives,'scope':'One-click console deployment; game plugin requires preinstalled compatible loader; no clean-machine game install claim'}
+ result={'version':version,'secret_findings':0,'archives':archives,'scope':'Online Mod installer downloads pinned dependencies and patches the loader locally; DSH and game/model assets excluded'}
  (out/'audit.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n');print(json.dumps(result,ensure_ascii=False,indent=2))
 if __name__=='__main__':main()
